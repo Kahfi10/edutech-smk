@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "EduTech SMK",
+    "slug": "edutech-smk",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "edutech-smk",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.edutechsmk.app"
+    },
+    "android": {
+      "package": "com.edutechsmk.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#4F46E5",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-notifications",
+      [
+        "expo-barcode-scanner",
+        {
+          "cameraPermission": "EduTech SMK perlu akses kamera untuk scan QR absensi."
+        }
+      ],
+      [
+        "expo-document-picker",
+        {
+          "iCloudContainerEnvironment": "Production"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
