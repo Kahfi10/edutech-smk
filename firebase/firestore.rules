@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helper Functions ───────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    function hasAnyRole(roles) {
+      return isAuthenticated() && getUserData().role in roles;
+    }
+
+    // ─── Users ──────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole('ADMIN');
+      allow update: if hasRole('ADMIN') || request.auth.uid == userId;
+      allow delete: if hasRole('ADMIN');
+    }
+
+    // ─── Classes ────────────────────────────────────────────────
+    match /classes/{classId} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('ADMIN');
+    }
+
+    // ─── Subjects ───────────────────────────────────────────────
+    match /subjects/{subjectId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAnyRole(['ADMIN', 'TEACHER']);
+    }
+
+    // ─── Materials ──────────────────────────────────────────────
+    match /materials/{materialId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['TEACHER', 'ADMIN']);
+      allow delete: if hasAnyRole(['TEACHER', 'ADMIN']);
+    }
+
+    // ─── Assignments ────────────────────────────────────────────
+    match /assignments/{assignmentId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['TEACHER', 'ADMIN']);
+      allow delete: if hasAnyRole(['TEACHER', 'ADMIN']);
+    }
+
+    // ─── Submissions ────────────────────────────────────────────
+    match /submissions/{submissionId} {
+      // Student bisa baca milik sendiri; Teacher bisa baca semua submission
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        hasAnyRole(['TEACHER', 'WALI', 'ADMIN'])
+      );
+      allow create: if hasRole('STUDENT') &&
+        request.resource.data.studentId == request.auth.uid;
+      allow update: if hasAnyRole(['TEACHER', 'ADMIN']);
+      allow delete: if hasRole('ADMIN');
+    }
+
+    // ─── Attendance ─────────────────────────────────────────────
+    match /attendance/{attendanceId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['TEACHER', 'PIKET', 'ADMIN']);
+      allow delete: if hasRole('ADMIN');
+    }
+
+    // ─── Violations ─────────────────────────────────────────────
+    match /violations/{violationId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        hasAnyRole(['TEACHER', 'WALI', 'BK', 'PIKET', 'ADMIN'])
+      );
+      allow create: if hasAnyRole(['TEACHER', 'WALI', 'BK', 'PIKET', 'ADMIN']);
+      allow update: if hasAnyRole(['WALI', 'BK', 'ADMIN']);
+      allow delete: if hasRole('ADMIN');
+    }
+
+    // ─── Counseling ─────────────────────────────────────────────
+    match /counseling/{counselingId} {
+      allow read: if isAuthenticated() && (
+        resource.data.studentId == request.auth.uid ||
+        resource.data.bkTeacherId == request.auth.uid ||
+        hasRole('ADMIN')
+      );
+      allow create: if hasAnyRole(['STUDENT', 'BK']);
+      allow update: if isAuthenticated() && (
+        resource.data.bkTeacherId == request.auth.uid ||
+        hasRole('ADMIN')
+      );
+      allow delete: if hasRole('ADMIN');
+    }
+
+    // ─── Chats & Messages ───────────────────────────────────────
+    match /chats/{chatId} {
+      allow read: if isAuthenticated() &&
+        request.auth.uid in resource.data.participants;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() &&
+        request.auth.uid in resource.data.participants;
+
+      match /messages/{msgId} {
+        allow read: if isAuthenticated() &&
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow create: if isAuthenticated() &&
+          request.resource.data.senderId == request.auth.uid;
+        allow update: if isAuthenticated();
+      }
+    }
+
+    // ─── Piket Logs ─────────────────────────────────────────────
+    match /piket_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create, update: if hasAnyRole(['PIKET', 'ADMIN']);
+      allow delete: if hasRole('ADMIN');
+    }
+
+    // ─── Announcements ──────────────────────────────────────────
+    match /announcements/{announcementId} {
+      allow read: if isAuthenticated();
+      allow create: if hasAnyRole(['ADMIN', 'PIKET', 'WALI']);
+      allow update, delete: if hasAnyRole(['ADMIN', 'PIKET']);
+    }
+  }
+}

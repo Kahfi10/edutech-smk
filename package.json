@@ -1,0 +1,16 @@
+{
+  "name": "edutech-smk-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "EduTech SMK — Mobile LMS + Admin Web Portal",
+  "scripts": {
+    "mobile": "cd mobile-app && npx expo start",
+    "mobile:android": "cd mobile-app && npx expo run:android",
+    "mobile:ios": "cd mobile-app && npx expo run:ios",
+    "admin": "cd admin-web && npm run dev",
+    "admin:build": "cd admin-web && npm run build",
+    "deploy:hosting": "cd admin-web && npm run build && firebase deploy --only hosting",
+    "deploy:rules": "firebase deploy --only firestore:rules,storage",
+    "deploy:all": "cd admin-web && npm run build && firebase deploy"
+  }
+}
