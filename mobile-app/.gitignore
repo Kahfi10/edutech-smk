@@ -1,8 +1,11 @@
 # ─── Environment & Secrets ───────────────────────────────────────
 .env
 .env.local
-.env.*
+.env.development
+.env.production
+.env.staging
 *.env
+# .env.example BOLEH di-commit (template, tidak ada secret)
 
 # Firebase credentials
 google-services.json
