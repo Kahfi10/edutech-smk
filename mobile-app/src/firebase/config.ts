@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import * as firebaseAuthModule from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -13,19 +14,28 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Gunakan require('firebase/auth') — Metro otomatis resolve ke RN bundle
-// Tidak pakai dist/rn/index.js langsung karena tidak ada di exports field
-const firebaseAuth = require('firebase/auth');
-const { initializeAuth, getAuth, getReactNativePersistence } = firebaseAuth;
+// Cast as any — Metro bundler resolve ke RN bundle yang punya getReactNativePersistence
+// TypeScript web types tidak punya export ini, tapi RN bundle ada
+const {
+  initializeAuth,
+  getAuth,
+  getReactNativePersistence,
+} = firebaseAuthModule as any;
 
-let auth: ReturnType<typeof getAuth>;
+let auth: ReturnType<typeof firebaseAuthModule.getAuth>;
+
 try {
-  // React Native: wajib pakai initializeAuth + AsyncStorage persistence
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
+  if (typeof getReactNativePersistence === 'function') {
+    // React Native path: pakai AsyncStorage persistence
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } else {
+    // Web path atau saat unit test
+    auth = getAuth(app);
+  }
 } catch {
-  // Hot reload: auth sudah diinisialisasi sebelumnya
+  // Hot reload: auth sudah diinisialisasi
   auth = getAuth(app);
 }
 
