@@ -5,7 +5,7 @@
 
 import { Timestamp } from 'firebase/firestore';
 
-export const USE_MOCK = true;   // ← ganti false setelah .env diisi
+export const USE_MOCK = false;  // Firebase aktif — .env sudah diisi
 
 const now = Timestamp.now();
 
