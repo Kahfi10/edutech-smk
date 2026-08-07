@@ -32,7 +32,6 @@ const firebaseConfig = {
   authDomain: "edutech-smk.firebaseapp.com",
   projectId: "edutech-smk",
   storageBucket: "edutech-smk.firebasestorage.app",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
   messagingSenderId: "1007739019694",
   appId: "1:1007739019694:web:a48af541050df726a6683f",
 };
