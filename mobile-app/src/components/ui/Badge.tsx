@@ -1,35 +1,30 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { Colors, Radius, Typography } from '../../constants/theme';
 
 interface BadgeProps {
   label: string;
-  color?: string;
-  bg?: string;
+  variant?: 'default' | 'light' | 'outline';
   style?: ViewStyle;
 }
 
-export const Badge: React.FC<BadgeProps> = ({
-  label,
-  color = '#FFFFFF',
-  bg = '#4F46E5',
-  style,
-}) => (
-  <View style={[styles.badge, { backgroundColor: bg }, style]}>
-    <Text style={[styles.label, { color }]}>{label}</Text>
+export const Badge: React.FC<BadgeProps> = ({ label, variant = 'default', style }) => (
+  <View style={[styles.badge, styles[variant], style]}>
+    <Text style={[styles.label, styles[`label_${variant}`]]}>{label}</Text>
   </View>
 );
 
 interface StatCardProps {
   label: string;
   value: string | number;
-  color?: string;
-  icon?: string;
+  sub?: string;
 }
 
-export const StatCard: React.FC<StatCardProps> = ({ label, value, color = '#4F46E5' }) => (
-  <View style={[styles.statCard, { borderLeftColor: color }]}>
-    <Text style={[styles.statValue, { color }]}>{value}</Text>
+export const StatCard: React.FC<StatCardProps> = ({ label, value, sub }) => (
+  <View style={styles.statCard}>
+    <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statLabel}>{label}</Text>
+    {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
   </View>
 );
 
@@ -37,33 +32,52 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 12,
+    borderRadius: Radius.full,
     alignSelf: 'flex-start',
   },
   label: {
-    fontSize: 11,
+    ...Typography.caption1,
     fontWeight: '600',
   },
+
+  // Variants
+  default: { backgroundColor: Colors.black },
+  light: { backgroundColor: Colors.gray11 },
+  outline: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: Colors.gray9,
+  },
+
+  label_default: { color: Colors.white },
+  label_light:   { color: Colors.gray3 },
+  label_outline: { color: Colors.gray4 },
+
+  // StatCard
   statCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 14,
     flex: 1,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: 14,
+    padding: 14,
     marginHorizontal: 4,
-    borderLeftWidth: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.separator,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.black,
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 12,
-    color: '#64748B',
+    ...Typography.caption1,
+    color: Colors.tertiaryLabel,
     marginTop: 2,
+    fontWeight: '500',
+  },
+  statSub: {
+    ...Typography.caption2,
+    color: Colors.quaternaryLabel,
+    marginTop: 1,
   },
 });
