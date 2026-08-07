@@ -1,34 +1,30 @@
 import React from 'react';
 import { View, ActivityIndicator, Text, StyleSheet } from 'react-native';
+import { Colors, Typography } from '../../constants/theme';
 
-interface LoadingSpinnerProps {
+export const LoadingSpinner: React.FC<{
   message?: string;
   fullScreen?: boolean;
-}
-
-export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  message = 'Memuat...',
-  fullScreen = false,
-}) => (
+}> = ({ message, fullScreen = false }) => (
   <View style={[styles.container, fullScreen && styles.fullScreen]}>
-    <ActivityIndicator size="large" color="#4F46E5" />
+    <ActivityIndicator size="large" color={Colors.black} />
     {message ? <Text style={styles.text}>{message}</Text> : null}
   </View>
 );
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
+    padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: Colors.background,
   },
   text: {
+    ...Typography.footnote,
+    color: Colors.tertiaryLabel,
     marginTop: 12,
-    color: '#64748B',
-    fontSize: 14,
   },
 });

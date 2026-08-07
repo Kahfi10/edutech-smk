@@ -1,80 +1,78 @@
 import React from 'react';
 import {
-  TouchableOpacity,
-  Text,
-  ActivityIndicator,
-  StyleSheet,
-  ViewStyle,
-  TextStyle,
+  TouchableOpacity, Text, ActivityIndicator,
+  StyleSheet, ViewStyle, TextStyle,
 } from 'react-native';
+import { Colors, Radius, Typography } from '../../constants/theme';
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export const Button: React.FC<ButtonProps> = ({
-  title,
-  onPress,
-  variant = 'primary',
-  loading = false,
-  disabled = false,
-  fullWidth = false,
-  style,
-  textStyle,
+  title, onPress, variant = 'primary', loading = false,
+  disabled = false, fullWidth = false, style, textStyle, size = 'md',
 }) => {
   const isDisabled = disabled || loading;
-
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
+      activeOpacity={0.7}
       style={[
         styles.base,
         styles[variant],
+        styles[`size_${size}`],
         fullWidth && styles.fullWidth,
         isDisabled && styles.disabled,
         style,
       ]}
-      activeOpacity={0.8}
     >
-      {loading ? (
-        <ActivityIndicator color={variant === 'ghost' ? '#4F46E5' : '#FFFFFF'} size="small" />
-      ) : (
-        <Text style={[styles.text, styles[`${variant}Text`], textStyle]}>{title}</Text>
-      )}
+      {loading
+        ? <ActivityIndicator color={variant === 'ghost' ? Colors.black : Colors.white} size="small" />
+        : <Text style={[styles.text, styles[`text_${variant}`], textStyle]}>{title}</Text>
+      }
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 10,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    flexDirection: 'row',
   },
   fullWidth: { width: '100%' },
-  disabled: { opacity: 0.5 },
-  primary: { backgroundColor: '#4F46E5' },
-  secondary: { backgroundColor: '#059669' },
-  danger: { backgroundColor: '#DC2626' },
+  disabled: { opacity: 0.35 },
+
+  // Variants
+  primary:     { backgroundColor: Colors.black },
+  secondary:   { backgroundColor: Colors.gray2 },
   ghost: {
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#4F46E5',
+    borderWidth: 1,
+    borderColor: Colors.gray9,
   },
-  text: { fontSize: 15, fontWeight: '600' },
-  primaryText: { color: '#FFFFFF' },
-  secondaryText: { color: '#FFFFFF' },
-  dangerText: { color: '#FFFFFF' },
-  ghostText: { color: '#4F46E5' },
+  destructive: { backgroundColor: Colors.gray1 },
+
+  // Sizes
+  size_sm: { paddingVertical: 8,  paddingHorizontal: 14, minHeight: 36 },
+  size_md: { paddingVertical: 13, paddingHorizontal: 20, minHeight: 50 },
+  size_lg: { paddingVertical: 16, paddingHorizontal: 24, minHeight: 56 },
+
+  // Text
+  text: { ...Typography.headline, letterSpacing: -0.2 },
+  text_primary:     { color: Colors.white },
+  text_secondary:   { color: Colors.white },
+  text_ghost:       { color: Colors.black },
+  text_destructive: { color: Colors.white },
 });
