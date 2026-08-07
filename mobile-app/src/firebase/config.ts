@@ -1,11 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { initializeAuth, getAuth, type Persistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// ─── Isi nilai ini setelah setup Firebase ────────────────────────
-// Ambil dari: Firebase Console → Project Settings → Your apps → Web
+// ─── Isi file .env dengan config dari Firebase Console ───────────
+// Firebase Storage TIDAK digunakan (butuh plan berbayar)
+// Yang dipakai: Auth + Firestore + FCM (semua GRATIS di Spark plan)
 const firebaseConfig = {
   apiKey:            process.env.EXPO_PUBLIC_FIREBASE_API_KEY            ?? '',
   authDomain:        process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN        ?? '',
@@ -15,11 +15,8 @@ const firebaseConfig = {
   appId:             process.env.EXPO_PUBLIC_FIREBASE_APP_ID             ?? '',
 };
 
-// Cegah duplikat inisialisasi (Expo hot reload)
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// React Native butuh AsyncStorage untuk persistensi sesi login
-// getReactNativePersistence ada di RN bundle, gunakan require untuk bypass TS web-types
 let _auth = (() => {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -30,12 +27,11 @@ let _auth = (() => {
       persistence: getReactNativePersistence(AsyncStorage),
     });
   } catch {
-    // Fallback: sudah diinisialisasi atau tidak ada RN persistence
     return getAuth(app);
   }
 })();
 
-export const auth    = _auth;
-export const db      = getFirestore(app);
-export const storage = getStorage(app);
+export const auth = _auth;
+export const db   = getFirestore(app);
+// Storage dihapus — gunakan placeholder URL untuk demo
 export default app;
