@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform, ScrollView, Alert,
@@ -7,26 +7,47 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { loginUser } from '../../src/firebase/auth.service';
+import { useAuth } from '../../src/context/AuthContext';
 import { Button } from '../../src/components/ui/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
+const ROLE_ROUTES: Record<string, string> = {
+  STUDENT: '/(student)/dashboard',
+  TEACHER: '/(teacher)/dashboard',
+  WALI:    '/(wali)/dashboard',
+  BK:      '/(bk)/dashboard',
+  PIKET:   '/(piket)/dashboard',
+  ADMIN:   '/(auth)/login',
+};
+
 export default function LoginScreen() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [focused, setFocused] = useState<'email' | 'password' | null>(null);
-  const insets = useSafeAreaInsets();
-  const router = useRouter();
+  const [loading, setLoading]           = useState(false);
+  const [errorMsg, setErrorMsg]         = useState('');
+  const [focused, setFocused]           = useState<'email' | 'password' | null>(null);
+  const insets  = useSafeAreaInsets();
+  const router  = useRouter();
+  const { profile, loading: authLoading } = useAuth();
+
+  // Redirect setelah profile berhasil dimuat (index.tsx tidak mounted lagi saat di /login)
+  useEffect(() => {
+    if (authLoading || !profile) return;
+    const route = ROLE_ROUTES[profile.role] ?? '/(auth)/login';
+    router.replace(route as any);
+  }, [profile, authLoading]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Perhatian', 'Email dan password tidak boleh kosong.');
+      setErrorMsg('Email dan password tidak boleh kosong.');
       return;
     }
     setLoading(true);
+    setErrorMsg('');
     try {
       await loginUser(email.trim().toLowerCase(), password);
+      // Redirect handled by useEffect above (watches profile from AuthContext)
     } catch (err: any) {
       const msg =
         err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password'
@@ -34,9 +55,11 @@ export default function LoginScreen() {
           : err.code === 'auth/user-not-found'
           ? 'Akun tidak ditemukan.'
           : err.code === 'auth/too-many-requests'
-          ? 'Terlalu banyak percobaan. Coba lagi nanti.'
-          : 'Gagal masuk. Coba lagi.';
-      Alert.alert('Gagal Masuk', msg);
+          ? 'Terlalu banyak percobaan. Coba beberapa saat lagi.'
+          : err.code === 'auth/network-request-failed'
+          ? 'Tidak ada koneksi internet.'
+          : `Gagal masuk: ${err.message}`;
+      setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
@@ -63,6 +86,14 @@ export default function LoginScreen() {
 
         {/* Form */}
         <View style={styles.form}>
+          {/* Error message */}
+          {errorMsg ? (
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle-outline" size={16} color={Colors.gray2} />
+              <Text style={styles.errorText}>{errorMsg}</Text>
+            </View>
+          ) : null}
+
           {/* Email */}
           <View style={[styles.inputWrap, focused === 'email' && styles.inputFocused]}>
             <Ionicons
@@ -119,7 +150,7 @@ export default function LoginScreen() {
 
           {/* Login Button */}
           <Button
-            title="Masuk"
+            title={loading ? 'Memverifikasi...' : 'Masuk'}
             onPress={handleLogin}
             loading={loading}
             fullWidth
@@ -150,8 +181,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     justifyContent: 'center',
   },
-
-  // Logo
   logoArea: { alignItems: 'center', marginBottom: 48 },
   logoBox: {
     width: 72, height: 72,
@@ -162,11 +191,24 @@ const styles = StyleSheet.create({
     ...Shadow.md,
   },
   logoText: { fontSize: 32, fontWeight: '800', color: Colors.white },
-  appName: { ...Typography.title2, color: Colors.black, marginBottom: 4 },
-  appSub: { ...Typography.subheadline, color: Colors.tertiaryLabel },
+  appName:  { ...Typography.title2, color: Colors.black, marginBottom: 4 },
+  appSub:   { ...Typography.subheadline, color: Colors.tertiaryLabel },
 
-  // Form
   form: { marginBottom: 32 },
+
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.gray11,
+    borderRadius: Radius.sm,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.gray4,
+  },
+  errorText: { ...Typography.footnote, color: Colors.gray2, flex: 1 },
+
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -182,18 +224,17 @@ const styles = StyleSheet.create({
     borderColor: Colors.black,
     borderWidth: 1.5,
   },
-  inputIcon: { marginRight: 10 },
+  inputIcon:  { marginRight: 10 },
   input: {
     flex: 1,
     ...Typography.body,
     color: Colors.black,
     paddingVertical: 0,
   },
-  eyeBtn: { padding: 4 },
+  eyeBtn:   { padding: 4 },
   inputGap: { height: 10 },
   loginBtn: { marginTop: 20 },
 
-  // Footer
   footer: { alignItems: 'center', gap: 10 },
   footerText: {
     ...Typography.caption1,
