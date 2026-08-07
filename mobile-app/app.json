@@ -14,13 +14,12 @@
     "android": {
       "package": "com.edutechsmk.app",
       "adaptiveIcon": {
-        "backgroundColor": "#4F46E5",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
-      "googleServicesFile": "./google-services.json"
+      "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -30,7 +29,7 @@
       "expo-router",
       "expo-notifications",
       [
-        "expo-barcode-scanner",
+        "expo-camera",
         {
           "cameraPermission": "EduTech SMK perlu akses kamera untuk scan QR absensi."
         }
