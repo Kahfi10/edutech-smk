@@ -1,31 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, FlatList,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { logoutUser } from '../../src/firebase/auth.service';
 import { subscribeCollection, getCollection, where, orderBy } from '../../src/firebase/firestore.service';
-import { Card } from '../../src/components/ui/Card';
-import { StatCard, Badge } from '../../src/components/ui/Badge';
 import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
+import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
+
+const MENU_ITEMS = [
+  { label: 'Materi',       icon: 'book-outline',         route: '/(student)/materials/all' },
+  { label: 'Tugas',        icon: 'document-text-outline', route: '/(student)/assignments'   },
+  { label: 'Nilai',        icon: 'star-outline',          route: '/(student)/grades'        },
+  { label: 'Absensi',      icon: 'calendar-outline',      route: '/(student)/attendance'    },
+  { label: 'Pelanggaran',  icon: 'warning-outline',       route: '/(student)/violations'    },
+  { label: 'Konseling BK', icon: 'chatbubbles-outline',   route: '/(student)/bk-booking'    },
+] as const;
 
 export default function StudentDashboard() {
   const { profile } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [assignments, setAssignments] = useState<any[]>([]);
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [upcomingAssignments, setUpcomingAssignments] = useState<any[]>([]);
   const [violationPoints, setViolationPoints] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!profile) return;
-
-    const unsubAnn = subscribeCollection(
-      'announcements',
-      (data) => setAnnouncements(data.slice(0, 3)),
-      orderBy('createdAt', 'desc')
-    );
 
     const unsubAssign = subscribeCollection(
       'assignments',
@@ -35,136 +40,284 @@ export default function StudentDashboard() {
           .filter((a: any) => a.classId === profile.classId && a.deadline?.toDate?.() > now)
           .sort((a: any, b: any) => a.deadline?.toDate?.() - b.deadline?.toDate?.())
           .slice(0, 5);
-        setUpcomingAssignments(upcoming);
+        setAssignments(upcoming);
         setLoading(false);
       },
-      where('classId', '==', profile.classId ?? '')
+      where('classId', '==', profile.classId ?? ''),
+    );
+
+    const unsubAnn = subscribeCollection(
+      'announcements',
+      (data) => setAnnouncements(data.slice(0, 3)),
+      orderBy('createdAt', 'desc'),
     );
 
     getCollection('violations', where('studentId', '==', profile.uid)).then(v => {
-      const total = v.filter((x: any) => x.status === 'verified')
+      const total = (v as any[])
+        .filter((x: any) => x.status === 'verified')
         .reduce((sum: number, x: any) => sum + (x.points ?? 0), 0);
       setViolationPoints(total);
     });
 
-    return () => { unsubAnn(); unsubAssign(); };
+    return () => { unsubAssign(); unsubAnn(); };
   }, [profile]);
 
-  const handleLogout = () => {
+  const handleLogout = () =>
     Alert.alert('Keluar', 'Yakin ingin keluar?', [
       { text: 'Batal', style: 'cancel' },
-      { text: 'Keluar', style: 'destructive', onPress: () => logoutUser() },
+      { text: 'Keluar', style: 'destructive', onPress: logoutUser },
     ]);
-  };
 
   if (loading) return <LoadingSpinner fullScreen />;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>Halo,</Text>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <View>
+          <Text style={styles.greeting}>Selamat datang,</Text>
           <Text style={styles.name}>{profile?.name}</Text>
-          <Text style={styles.nisText}>NIS: {profile?.nis ?? '-'}</Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Keluar</Text>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} hitSlop={8}>
+          <Ionicons name="log-out-outline" size={22} color={Colors.white} />
         </TouchableOpacity>
       </View>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <StatCard label="Tugas" value={upcomingAssignments.length} color="#4F46E5" />
-        <StatCard label="Poin Pelanggar." value={violationPoints} color={violationPoints > 50 ? '#DC2626' : '#D97706'} />
-      </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      >
+        {/* Info strip */}
+        <View style={styles.infoStrip}>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoValue}>{profile?.nis ?? '-'}</Text>
+            <Text style={styles.infoLabel}>NIS</Text>
+          </View>
+          <View style={styles.infoSep} />
+          <View style={styles.infoItem}>
+            <Text style={styles.infoValue}>{assignments.length}</Text>
+            <Text style={styles.infoLabel}>Tugas Aktif</Text>
+          </View>
+          <View style={styles.infoSep} />
+          <View style={styles.infoItem}>
+            <Text style={[styles.infoValue, violationPoints >= 80 && styles.dangerText]}>
+              {violationPoints}
+            </Text>
+            <Text style={styles.infoLabel}>Poin Pelanggar.</Text>
+          </View>
+        </View>
 
-      {/* Quick Menu */}
-      <Text style={styles.sectionTitle}>Menu</Text>
-      <View style={styles.menuGrid}>
-        {[
-          { label: '📚 Materi', route: '/(student)/materials/all', color: '#EEF2FF' },
-          { label: '📝 Tugas', route: '/(student)/assignments', color: '#ECFDF5' },
-          { label: '⭐ Nilai', route: '/(student)/grades', color: '#FFFBEB' },
-          { label: '📋 Absensi', route: '/(student)/attendance', color: '#FEF2F2' },
-          { label: '⚠️ Pelanggaran', route: '/(student)/violations', color: '#FDF4FF' },
-          { label: '💬 Konseling BK', route: '/(student)/bk-booking', color: '#F0FDF4' },
-        ].map(item => (
-          <TouchableOpacity
-            key={item.label}
-            style={[styles.menuItem, { backgroundColor: item.color }]}
-            onPress={() => router.push(item.route as any)}
-          >
-            <Text style={styles.menuLabel}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Upcoming Assignments */}
-      <Text style={styles.sectionTitle}>Tugas Mendatang</Text>
-      {upcomingAssignments.length === 0 ? (
-        <Card><Text style={styles.empty}>Tidak ada tugas mendatang 🎉</Text></Card>
-      ) : (
-        upcomingAssignments.map(a => {
-          const daysLeft = Math.ceil(
-            (a.deadline?.toDate?.().getTime() - Date.now()) / (1000 * 3600 * 24)
-          );
-          return (
-            <Card key={a.id}>
-              <View style={styles.assignRow}>
-                <Text style={styles.assignTitle} numberOfLines={2}>{a.title}</Text>
-                <Badge
-                  label={`${daysLeft}h`}
-                  bg={daysLeft <= 1 ? '#DC2626' : daysLeft <= 3 ? '#D97706' : '#059669'}
-                />
+        {/* Menu grid */}
+        <Text style={styles.sectionTitle}>Menu</Text>
+        <View style={styles.menuGrid}>
+          {MENU_ITEMS.map(item => (
+            <TouchableOpacity
+              key={item.label}
+              style={styles.menuItem}
+              onPress={() => router.push(item.route as any)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.menuIconBox}>
+                <Ionicons name={item.icon as any} size={22} color={Colors.black} />
               </View>
-              <Text style={styles.assignSub}>
-                Deadline: {a.deadline?.toDate?.().toLocaleDateString('id-ID')}
-              </Text>
-            </Card>
-          );
-        })
-      )}
+              <Text style={styles.menuLabel}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      {/* Announcements */}
-      <Text style={styles.sectionTitle}>Pengumuman Terbaru</Text>
-      {announcements.map(a => (
-        <Card key={a.id} style={a.isUrgent ? styles.urgentCard : undefined}>
-          {a.isUrgent && <Badge label="🚨 URGENT" bg="#DC2626" style={{ marginBottom: 6 }} />}
-          <Text style={styles.annTitle}>{a.title}</Text>
-          <Text style={styles.annBody} numberOfLines={2}>{a.body}</Text>
-        </Card>
-      ))}
-    </ScrollView>
+        {/* Upcoming assignments */}
+        {assignments.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Tugas Mendatang</Text>
+            <View style={styles.listCard}>
+              {assignments.map((a, i) => {
+                const daysLeft = Math.ceil(
+                  (a.deadline?.toDate?.().getTime() - Date.now()) / (1000 * 3600 * 24),
+                );
+                const isUrgent = daysLeft <= 2;
+                return (
+                  <View key={a.id}>
+                    <View style={styles.assignRow}>
+                      <View style={[styles.urgentDot, isUrgent && styles.urgentDotActive]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.assignTitle} numberOfLines={1}>{a.title}</Text>
+                        <Text style={styles.assignSub}>
+                          {a.deadline?.toDate?.().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          {' · '}
+                          <Text style={isUrgent ? styles.urgentText : styles.normalText}>
+                            {daysLeft === 0 ? 'Hari ini' : `${daysLeft} hari lagi`}
+                          </Text>
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={16} color={Colors.gray8} />
+                    </View>
+                    {i < assignments.length - 1 && <View style={styles.rowDivider} />}
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        {/* Announcements */}
+        {announcements.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Pengumuman</Text>
+            <View style={styles.listCard}>
+              {announcements.map((a, i) => (
+                <View key={a.id}>
+                  <View style={styles.annRow}>
+                    {a.isUrgent && (
+                      <View style={styles.urgentBadge}>
+                        <Text style={styles.urgentBadgeText}>PENTING</Text>
+                      </View>
+                    )}
+                    <Text style={styles.annTitle} numberOfLines={1}>{a.title}</Text>
+                    <Text style={styles.annBody} numberOfLines={2}>{a.body}</Text>
+                  </View>
+                  {i < announcements.length - 1 && <View style={styles.rowDivider} />}
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, paddingBottom: 32 },
+  container: { flex: 1, backgroundColor: Colors.background },
+
+  // Header
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#4F46E5', borderRadius: 14, padding: 16, marginBottom: 16,
+    backgroundColor: Colors.black,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.xl,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
   },
-  headerLeft: {},
-  greeting: { fontSize: 12, color: '#C7D2FE' },
-  name: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
-  nisText: { fontSize: 11, color: '#C7D2FE', marginTop: 2 },
-  logoutBtn: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 8, padding: 8 },
-  logoutText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
-  statsRow: { flexDirection: 'row', marginHorizontal: -4, marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginVertical: 10 },
-  menuGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  greeting: { ...Typography.subheadline, color: 'rgba(255,255,255,0.55)', marginBottom: 2 },
+  name: { ...Typography.title2, color: Colors.white },
+  logoutBtn: {
+    width: 36, height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Info strip
+  infoStrip: {
+    backgroundColor: Colors.cardBackground,
+    flexDirection: 'row',
+    marginHorizontal: Spacing.base,
+    marginTop: -14,
+    borderRadius: Radius.lg,
+    padding: Spacing.base,
+    ...Shadow.md,
+  },
+  infoItem: { flex: 1, alignItems: 'center' },
+  infoValue: { ...Typography.title3, color: Colors.black },
+  infoLabel: { ...Typography.caption1, color: Colors.tertiaryLabel, marginTop: 2 },
+  infoSep: {
+    width: StyleSheet.hairlineWidth,
+    height: '100%',
+    backgroundColor: Colors.separator,
+    marginHorizontal: 4,
+  },
+  dangerText: { color: Colors.gray1 },
+
+  // Section title
+  sectionTitle: {
+    ...Typography.footnote,
+    color: Colors.tertiaryLabel,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.sm,
+  },
+
+  // Menu
+  menuGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: Spacing.base,
+    gap: 10,
+  },
   menuItem: {
-    width: '47%', borderRadius: 12, padding: 14,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, elevation: 1,
+    width: '30%',
+    flex: 1,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing.base,
+    paddingHorizontal: Spacing.sm,
+    alignItems: 'center',
+    gap: 8,
+    ...Shadow.xs,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.separator,
   },
-  menuLabel: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
-  assignRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  assignTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: '#1E293B', marginRight: 8 },
-  assignSub: { fontSize: 12, color: '#64748B', marginTop: 4 },
-  urgentCard: { borderLeftWidth: 4, borderLeftColor: '#DC2626' },
-  annTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
-  annBody: { fontSize: 13, color: '#64748B', marginTop: 3 },
-  empty: { textAlign: 'center', color: '#94A3B8', fontSize: 14 },
+  menuIconBox: {
+    width: 44, height: 44,
+    borderRadius: 12,
+    backgroundColor: Colors.gray11,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  menuLabel: { ...Typography.caption1, color: Colors.secondaryLabel, fontWeight: '500', textAlign: 'center' },
+
+  // List card
+  listCard: {
+    backgroundColor: Colors.cardBackground,
+    marginHorizontal: Spacing.base,
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+    ...Shadow.xs,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.separator,
+  },
+
+  // Assignment row
+  assignRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.base,
+    paddingVertical: 13,
+    gap: 10,
+  },
+  urgentDot: {
+    width: 7, height: 7,
+    borderRadius: 4,
+    backgroundColor: Colors.gray8,
+  },
+  urgentDotActive: { backgroundColor: Colors.gray2 },
+  assignTitle: { ...Typography.subheadline, color: Colors.black, fontWeight: '500' },
+  assignSub: { ...Typography.caption1, color: Colors.tertiaryLabel, marginTop: 2 },
+  urgentText: { color: Colors.gray2, fontWeight: '600' },
+  normalText: { color: Colors.tertiaryLabel },
+  rowDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.separator,
+    marginLeft: Spacing.base + 17,
+  },
+
+  // Announcement
+  annRow: {
+    paddingHorizontal: Spacing.base,
+    paddingVertical: 13,
+    gap: 4,
+  },
+  urgentBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.gray1,
+    borderRadius: Radius.xs,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginBottom: 4,
+  },
+  urgentBadgeText: { ...Typography.caption2, color: Colors.white, fontWeight: '700', letterSpacing: 0.4 },
+  annTitle: { ...Typography.subheadline, color: Colors.black, fontWeight: '500' },
+  annBody: { ...Typography.footnote, color: Colors.secondaryLabel, marginTop: 2 },
 });
