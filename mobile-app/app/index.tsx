@@ -1,48 +1,39 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import { useAuth } from '../src/context/AuthContext';
 import { View, ActivityIndicator } from 'react-native';
+import { useAuth } from '../src/context/AuthContext';
+import { USE_MOCK } from '../src/constants/mockData';
+import { Colors } from '../src/constants/theme';
 import { ROLES } from '../src/constants/roles';
 
+const ROLE_ROUTES: Record<string, string> = {
+  STUDENT: '/(student)/dashboard',
+  TEACHER: '/(teacher)/dashboard',
+  WALI:    '/(wali)/dashboard',
+  BK:      '/(bk)/dashboard',
+  PIKET:   '/(piket)/dashboard',
+  ADMIN:   '/(auth)/login',
+};
+
 export default function Index() {
-  const { user, profile, loading } = useAuth();
+  const { profile, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) return;
 
-    if (!user || !profile) {
+    if (!profile) {
       router.replace('/(auth)/login');
       return;
     }
 
-    switch (profile.role) {
-      case ROLES.STUDENT:
-        router.replace('/(student)/dashboard');
-        break;
-      case ROLES.TEACHER:
-        router.replace('/(teacher)/dashboard');
-        break;
-      case ROLES.WALI:
-        router.replace('/(wali)/dashboard');
-        break;
-      case ROLES.BK:
-        router.replace('/(bk)/dashboard');
-        break;
-      case ROLES.PIKET:
-        router.replace('/(piket)/dashboard');
-        break;
-      case ROLES.ADMIN:
-        router.replace('/(auth)/login');
-        break;
-      default:
-        router.replace('/(auth)/login');
-    }
-  }, [loading, user, profile]);
+    const route = ROLE_ROUTES[profile.role] ?? '/(auth)/login';
+    router.replace(route as any);
+  }, [loading, profile]);
 
   return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#4F46E5' }}>
-      <ActivityIndicator size="large" color="#FFFFFF" />
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.black }}>
+      <ActivityIndicator size="large" color={Colors.white} />
     </View>
   );
 }
