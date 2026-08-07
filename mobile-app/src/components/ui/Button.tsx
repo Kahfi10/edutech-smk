@@ -8,7 +8,7 @@ import { Colors, Radius, Typography } from '../../constants/theme';
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive' | 'danger';
   loading?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
@@ -21,6 +21,7 @@ export const Button: React.FC<ButtonProps> = ({
   title, onPress, variant = 'primary', loading = false,
   disabled = false, fullWidth = false, style, textStyle, size = 'md',
 }) => {
+  const v = (variant === 'danger' ? 'destructive' : variant) as 'primary' | 'secondary' | 'ghost' | 'destructive';
   const isDisabled = disabled || loading;
   return (
     <TouchableOpacity
@@ -29,7 +30,7 @@ export const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.7}
       style={[
         styles.base,
-        styles[variant],
+        styles[v],
         styles[`size_${size}`],
         fullWidth && styles.fullWidth,
         isDisabled && styles.disabled,
@@ -37,8 +38,8 @@ export const Button: React.FC<ButtonProps> = ({
       ]}
     >
       {loading
-        ? <ActivityIndicator color={variant === 'ghost' ? Colors.black : Colors.white} size="small" />
-        : <Text style={[styles.text, styles[`text_${variant}`], textStyle]}>{title}</Text>
+        ? <ActivityIndicator color={v === 'ghost' ? Colors.black : Colors.white} size="small" />
+        : <Text style={[styles.text, styles[`text_${v}`], textStyle]}>{title}</Text>
       }
     </TouchableOpacity>
   );
