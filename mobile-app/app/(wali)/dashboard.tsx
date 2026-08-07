@@ -1,130 +1,262 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
+import {
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { logoutUser } from '../../src/firebase/auth.service';
 import { getCollection, subscribeCollection, where } from '../../src/firebase/firestore.service';
-import { Card } from '../../src/components/ui/Card';
-import { StatCard, Badge } from '../../src/components/ui/Badge';
 import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
+import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 export default function WaliDashboard() {
   const { profile } = useAuth();
-  const [classData, setClassData] = useState<any>(null);
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [students, setStudents] = useState<any[]>([]);
   const [alertCount, setAlertCount] = useState(0);
   const [avgGrade, setAvgGrade] = useState(0);
+  const [className, setClassName] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!profile?.classId) { setLoading(false); return; }
 
     Promise.all([
-      getCollection('classes').then(cls => cls.find((c: any) => c.id === profile.classId)),
+      getCollection('classes'),
       getCollection('users', where('role', '==', 'STUDENT'), where('classId', '==', profile.classId)),
-    ]).then(async ([cls, studs]) => {
-      setClassData(cls);
+      getCollection('attendance'),
+      getCollection('submissions'),
+      getCollection('violations'),
+    ]).then(([cls, studs, attend, subs, viols]) => {
+      const myClass = (cls as any[]).find(c => c.id === profile.classId);
+      setClassName(myClass?.name ?? '');
       setStudents(studs as any[]);
 
-      // Hitung alerts
       let alerts = 0;
-      const allAttend = await getCollection('attendance');
-      const subs = await getCollection('submissions');
-
-      for (const s of (studs as any[])) {
-        // Alpha count
-        const alphas = allAttend.filter((a: any) =>
+      for (const s of studs as any[]) {
+        const alphas = (attend as any[]).filter(a =>
           a.records?.some((r: any) => r.studentId === s.uid && r.status === 'alpha')
         ).length;
         if (alphas > 3) alerts++;
 
-        // Grade drop check
-        const mySubs = (subs as any[]).filter(sub => sub.studentId === s.uid && sub.score != null);
+        const mySubs = (subs as any[]).filter(x => x.studentId === s.uid && x.score != null);
         if (mySubs.length >= 4) {
-          const recent2 = mySubs.slice(-2).reduce((sum: number, x: any) => sum + x.score, 0) / 2;
-          const prev2 = mySubs.slice(-4, -2).reduce((sum: number, x: any) => sum + x.score, 0) / 2;
-          if (prev2 - recent2 > 20) alerts++;
+          const recent = mySubs.slice(-2).reduce((n: number, x: any) => n + x.score, 0) / 2;
+          const prev   = mySubs.slice(-4, -2).reduce((n: number, x: any) => n + x.score, 0) / 2;
+          if (prev - recent > 20) alerts++;
         }
+        const pts = (viols as any[])
+          .filter(v => v.studentId === s.uid && v.status === 'verified')
+          .reduce((n: number, v: any) => n + (v.points ?? 0), 0);
+        if (pts >= 80) alerts++;
       }
       setAlertCount(alerts);
 
-      // Avg grade
       const allSubs = (subs as any[]).filter(s =>
-        (studs as any[]).some(st => st.uid === s.studentId) && s.score != null
+        (studs as any[]).some((st: any) => st.uid === s.studentId) && s.score != null
       );
       setAvgGrade(allSubs.length
-        ? Math.round(allSubs.reduce((sum: number, s: any) => sum + s.score, 0) / allSubs.length)
+        ? Math.round(allSubs.reduce((n: number, s: any) => n + s.score, 0) / allSubs.length)
         : 0);
     }).finally(() => setLoading(false));
   }, [profile]);
 
   if (loading) return <LoadingSpinner fullScreen />;
 
+  const NAV = [
+    { label: 'Daftar Siswa', icon: 'people-outline',       route: '/(wali)/students'   },
+    { label: 'Alert Sistem', icon: 'alert-circle-outline', route: '/(wali)/alerts'     },
+    { label: 'Pelanggaran',  icon: 'warning-outline',      route: '/(wali)/violations' },
+  ] as const;
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
-          <Text style={styles.greeting}>Wali Kelas</Text>
+          <Text style={styles.role}>Wali Kelas  {className}</Text>
           <Text style={styles.name}>{profile?.name}</Text>
-          <Text style={styles.className}>{classData?.name ?? '-'}</Text>
         </View>
-        <TouchableOpacity onPress={() => Alert.alert('Keluar', 'Yakin?', [{ text: 'Batal' }, { text: 'Keluar', onPress: logoutUser }])} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Keluar</Text>
+        <TouchableOpacity
+          onPress={() => Alert.alert('Keluar', 'Yakin?', [
+            { text: 'Batal', style: 'cancel' },
+            { text: 'Keluar', style: 'destructive', onPress: logoutUser },
+          ])}
+          style={styles.logoutBtn} hitSlop={8}
+        >
+          <Ionicons name="log-out-outline" size={22} color={Colors.white} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.statsRow}>
-        <StatCard label="Siswa" value={students.length} color="#D97706" />
-        <StatCard label="Avg Nilai" value={avgGrade} color={avgGrade >= 75 ? '#059669' : '#DC2626'} />
-        <StatCard label="Alert" value={alertCount} color={alertCount > 0 ? '#DC2626' : '#059669'} />
-      </View>
-
-      {alertCount > 0 && (
-        <View style={styles.alertBanner}>
-          <Text style={styles.alertIcon}>🚨</Text>
-          <Text style={styles.alertText}>{alertCount} siswa membutuhkan perhatian segera!</Text>
-        </View>
-      )}
-
-      <Text style={styles.sectionTitle}>Siswa Kelas ({students.length})</Text>
-      {students.slice(0, 5).map(s => (
-        <Card key={s.uid}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Text style={styles.studentName}>{s.name}</Text>
-              <Text style={styles.studentNis}>NIS: {s.nis}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
+        {/* Stats strip */}
+        <View style={styles.statsRow}>
+          {[
+            { label: 'Siswa',      value: students.length                                },
+            { label: 'Rata-rata',  value: avgGrade                                       },
+            { label: 'Alert',      value: alertCount, warn: alertCount > 0               },
+          ].map(s => (
+            <View key={s.label} style={styles.statCard}>
+              <Text style={[styles.statValue, (s as any).warn && styles.warnText]}>{s.value}</Text>
+              <Text style={styles.statLabel}>{s.label}</Text>
             </View>
-            <Text style={styles.arrowIcon}>→</Text>
-          </View>
-        </Card>
-      ))}
-      {students.length > 5 && <Text style={styles.seeAll}>+{students.length - 5} siswa lainnya</Text>}
-    </ScrollView>
+          ))}
+        </View>
+
+        {/* Alert banner */}
+        {alertCount > 0 && (
+          <TouchableOpacity
+            style={styles.alertBanner}
+            onPress={() => router.push('/(wali)/alerts')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="alert-circle" size={18} color={Colors.gray1} />
+            <Text style={styles.alertText}>{alertCount} siswa membutuhkan perhatian</Text>
+            <Ionicons name="chevron-forward" size={16} color={Colors.gray5} />
+          </TouchableOpacity>
+        )}
+
+        {/* Nav cards */}
+        <Text style={styles.sectionTitle}>Kelola Kelas</Text>
+        <View style={styles.listCard}>
+          {NAV.map((n, i) => (
+            <View key={n.label}>
+              <TouchableOpacity
+                style={styles.navRow}
+                onPress={() => router.push(n.route as any)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.navIcon}>
+                  <Ionicons name={n.icon as any} size={20} color={Colors.gray3} />
+                </View>
+                <Text style={styles.navLabel}>{n.label}</Text>
+                <Ionicons name="chevron-forward" size={16} color={Colors.gray8} />
+              </TouchableOpacity>
+              {i < NAV.length - 1 && <View style={styles.rowDivider} />}
+            </View>
+          ))}
+        </View>
+
+        {/* Preview students */}
+        {students.length > 0 && (
+          <>
+            <Text style={styles.sectionTitle}>Siswa Kelas</Text>
+            <View style={styles.listCard}>
+              {students.slice(0, 5).map((s, i) => (
+                <View key={s.uid}>
+                  <View style={styles.studentRow}>
+                    <View style={styles.avatarCircle}>
+                      <Text style={styles.avatarText}>{s.name?.[0]?.toUpperCase()}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.studentName}>{s.name}</Text>
+                      <Text style={styles.studentNis}>NIS {s.nis ?? '-'}</Text>
+                    </View>
+                  </View>
+                  {i < Math.min(students.length, 5) - 1 && (
+                    <View style={[styles.rowDivider, { marginLeft: Spacing.base + 42 }]} />
+                  )}
+                </View>
+              ))}
+              {students.length > 5 && (
+                <TouchableOpacity
+                  style={styles.moreBtn}
+                  onPress={() => router.push('/(wali)/students' as any)}
+                >
+                  <Text style={styles.moreBtnText}>Lihat semua {students.length} siswa</Text>
+                  <Ionicons name="chevron-forward" size={14} color={Colors.gray5} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, paddingBottom: 32 },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: '#D97706', borderRadius: 14, padding: 16, marginBottom: 16,
+    backgroundColor: Colors.gray2,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.xl,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
   },
-  greeting: { fontSize: 12, color: '#FEF3C7' },
-  name: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
-  className: { fontSize: 12, color: '#FEF3C7', marginTop: 2 },
-  logoutBtn: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, padding: 8 },
-  logoutText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
-  statsRow: { flexDirection: 'row', marginHorizontal: -4, marginBottom: 12 },
+  role: { ...Typography.footnote, color: 'rgba(255,255,255,0.5)', marginBottom: 2 },
+  name: { ...Typography.title2, color: Colors.white },
+  logoutBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginHorizontal: Spacing.base,
+    marginTop: Spacing.xl,
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    alignItems: 'center',
+    gap: 3,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: Colors.separator,
+    ...Shadow.xs,
+  },
+  statValue: { ...Typography.title2, color: Colors.black },
+  statLabel: { ...Typography.caption2, color: Colors.tertiaryLabel },
+  warnText: { color: Colors.gray1 },
   alertBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#FEF2F2', borderLeftWidth: 4, borderLeftColor: '#DC2626',
-    borderRadius: 8, padding: 12, marginBottom: 12,
+    marginHorizontal: Spacing.base, marginTop: Spacing.base,
+    backgroundColor: Colors.cardBackground,
+    borderRadius: Radius.md, padding: Spacing.md,
+    borderWidth: 1, borderColor: Colors.gray9,
+    ...Shadow.xs,
   },
-  alertIcon: { fontSize: 20 },
-  alertText: { flex: 1, fontSize: 13, color: '#DC2626', fontWeight: '600' },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1E293B', marginVertical: 10 },
-  studentName: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
-  studentNis: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  arrowIcon: { fontSize: 16, color: '#94A3B8' },
-  seeAll: { textAlign: 'center', color: '#4F46E5', fontSize: 13, fontWeight: '600', padding: 8 },
+  alertText: { ...Typography.subheadline, color: Colors.gray1, flex: 1, fontWeight: '500' },
+  sectionTitle: {
+    ...Typography.footnote, color: Colors.tertiaryLabel, fontWeight: '600',
+    letterSpacing: 0.5, textTransform: 'uppercase',
+    marginHorizontal: Spacing.xl, marginTop: Spacing.xl, marginBottom: Spacing.sm,
+  },
+  listCard: {
+    backgroundColor: Colors.cardBackground,
+    marginHorizontal: Spacing.base, borderRadius: Radius.lg, overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator, ...Shadow.xs,
+  },
+  navRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: Spacing.base, paddingVertical: 13, gap: 12,
+  },
+  navIcon: {
+    width: 36, height: 36, borderRadius: 8,
+    backgroundColor: Colors.gray11, alignItems: 'center', justifyContent: 'center',
+  },
+  navLabel: { ...Typography.body, flex: 1 },
+  rowDivider: { height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: Spacing.base },
+  studentRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: Spacing.base, paddingVertical: 10, gap: 12,
+  },
+  avatarCircle: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: Colors.gray10, alignItems: 'center', justifyContent: 'center',
+  },
+  avatarText: { ...Typography.subheadline, color: Colors.gray3, fontWeight: '600' },
+  studentName: { ...Typography.subheadline, color: Colors.black, fontWeight: '500' },
+  studentNis: { ...Typography.caption1, color: Colors.tertiaryLabel, marginTop: 1 },
+  moreBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 12, gap: 4, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.separator,
+  },
+  moreBtnText: { ...Typography.footnote, color: Colors.gray5, fontWeight: '500' },
 });
