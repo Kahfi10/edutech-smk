@@ -1,27 +1,35 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../../src/constants/theme';
 
-const TabIcon = ({ emoji, color }: { emoji: string; color: string }) => (
-  <Text style={{ fontSize: 20, opacity: color === '#94A3B8' ? 0.5 : 1 }}>{emoji}</Text>
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+const tabIcon = (name: IoniconsName, focused: boolean) => (
+  <Ionicons name={focused ? name : `${name}-outline` as IoniconsName} size={24} color={focused ? Colors.black : Colors.gray7} />
 );
 
 export default function StudentLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: '#4F46E5' },
-        headerTintColor: '#FFFFFF',
-        headerTitleStyle: { fontWeight: '700' },
-        tabBarActiveTintColor: '#4F46E5',
-        tabBarInactiveTintColor: '#94A3B8',
-        tabBarStyle: { borderTopColor: '#E2E8F0' },
+        headerShown: false,
+        tabBarActiveTintColor: Colors.black,
+        tabBarInactiveTintColor: Colors.gray7,
+        tabBarStyle: {
+          backgroundColor: Colors.cardBackground,
+          borderTopColor: Colors.separator,
+          borderTopWidth: StyleSheet.hairlineWidth,
+        },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
       }}
     >
-      <Tabs.Screen name="dashboard" options={{ title: 'Beranda', tabBarLabel: 'Home', tabBarIcon: ({ color }) => <TabIcon emoji="🏠" color={color} /> }} />
-      <Tabs.Screen name="materials/[subjectId]" options={{ title: 'Materi', tabBarLabel: 'Materi', tabBarIcon: ({ color }) => <TabIcon emoji="📚" color={color} /> }} />
-      <Tabs.Screen name="assignments/index" options={{ title: 'Tugas', tabBarLabel: 'Tugas', tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} /> }} />
-      <Tabs.Screen name="grades" options={{ title: 'Nilai', tabBarLabel: 'Nilai', tabBarIcon: ({ color }) => <TabIcon emoji="⭐" color={color} /> }} />
-      <Tabs.Screen name="attendance" options={{ title: 'Absensi', tabBarLabel: 'Absensi', tabBarIcon: ({ color }) => <TabIcon emoji="📋" color={color} /> }} />
+      <Tabs.Screen name="dashboard"  options={{ title: 'Beranda',  tabBarIcon: ({ focused }) => tabIcon('home', focused) }} />
+      <Tabs.Screen name="materials/[subjectId]" options={{ title: 'Materi',   tabBarIcon: ({ focused }) => tabIcon('book', focused) }} />
+      <Tabs.Screen name="assignments/index"     options={{ title: 'Tugas',    tabBarIcon: ({ focused }) => tabIcon('document-text', focused) }} />
+      <Tabs.Screen name="grades"     options={{ title: 'Nilai',    tabBarIcon: ({ focused }) => tabIcon('star', focused) }} />
+      <Tabs.Screen name="attendance" options={{ title: 'Absensi',  tabBarIcon: ({ focused }) => tabIcon('calendar', focused) }} />
     </Tabs>
   );
 }
+
+import { StyleSheet } from 'react-native';

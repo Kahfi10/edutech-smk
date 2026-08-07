@@ -1,13 +1,28 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
-const Icon = ({ e, c }: { e: string; c: string }) => <Text style={{ fontSize: 20, opacity: c === '#94A3B8' ? 0.5 : 1 }}>{e}</Text>;
+import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet } from 'react-native';
+import { Colors } from '../../src/constants/theme';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+const tabIcon = (name: IoniconsName, focused: boolean) => (
+  <Ionicons name={focused ? name : `${name}-outline` as IoniconsName} size={24} color={focused ? Colors.black : Colors.gray7} />
+);
+
 export default function PiketLayout() {
   return (
-    <Tabs screenOptions={{ headerStyle: { backgroundColor: '#7C3AED' }, headerTintColor: '#FFFFFF', headerTitleStyle: { fontWeight: '700' }, tabBarActiveTintColor: '#7C3AED', tabBarInactiveTintColor: '#94A3B8' }}>
-      <Tabs.Screen name="dashboard" options={{ title: 'Dashboard Piket', tabBarIcon: ({ color }) => <Icon e="🏠" c={color} /> }} />
-      <Tabs.Screen name="qr-scan" options={{ title: 'Scan QR', tabBarIcon: ({ color }) => <Icon e="📱" c={color} /> }} />
-      <Tabs.Screen name="daily-log" options={{ title: 'Buku Piket', tabBarIcon: ({ color }) => <Icon e="📔" c={color} /> }} />
-      <Tabs.Screen name="broadcast" options={{ title: 'Broadcast', tabBarIcon: ({ color }) => <Icon e="📢" c={color} /> }} />
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: Colors.black,
+        tabBarInactiveTintColor: Colors.gray7,
+        tabBarStyle: { backgroundColor: Colors.cardBackground, borderTopColor: Colors.separator, borderTopWidth: StyleSheet.hairlineWidth },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
+      }}
+    >
+      <Tabs.Screen name="dashboard"  options={{ title: 'Beranda',   tabBarIcon: ({ focused }) => tabIcon('home', focused) }} />
+      <Tabs.Screen name="qr-scan"    options={{ title: 'Scan',      tabBarIcon: ({ focused }) => tabIcon('qr-code', focused) }} />
+      <Tabs.Screen name="daily-log"  options={{ title: 'Buku Piket',tabBarIcon: ({ focused }) => tabIcon('book', focused) }} />
+      <Tabs.Screen name="broadcast"  options={{ title: 'Siaran',    tabBarIcon: ({ focused }) => tabIcon('megaphone', focused) }} />
     </Tabs>
   );
 }

@@ -1,42 +1,34 @@
 import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet } from 'react-native';
+import { Colors } from '../../src/constants/theme';
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
+
+const tabIcon = (name: IoniconsName, focused: boolean) => (
+  <Ionicons name={focused ? name : `${name}-outline` as IoniconsName} size={24} color={focused ? Colors.black : Colors.gray7} />
+);
 
 export default function TeacherLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: '#059669' },
-        headerTintColor: '#FFFFFF',
-        headerTitleStyle: { fontWeight: '700' },
-        tabBarActiveTintColor: '#059669',
-        tabBarInactiveTintColor: '#94A3B8',
-        tabBarStyle: { borderTopColor: '#E2E8F0' },
+        headerShown: false,
+        tabBarActiveTintColor: Colors.black,
+        tabBarInactiveTintColor: Colors.gray7,
+        tabBarStyle: {
+          backgroundColor: Colors.cardBackground,
+          borderTopColor: Colors.separator,
+          borderTopWidth: StyleSheet.hairlineWidth,
+        },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
       }}
     >
-      <Tabs.Screen
-        name="dashboard"
-        options={{ title: 'Dashboard', tabBarLabel: 'Home', tabBarIcon: ({ color }) => <TabIcon emoji="🏠" color={color} /> }}
-      />
-      <Tabs.Screen
-        name="upload-material"
-        options={{ title: 'Upload Materi', tabBarLabel: 'Materi', tabBarIcon: ({ color }) => <TabIcon emoji="📚" color={color} /> }}
-      />
-      <Tabs.Screen
-        name="assignments/create"
-        options={{ title: 'Buat Tugas', tabBarLabel: 'Tugas', tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} /> }}
-      />
-      <Tabs.Screen
-        name="assignments/grade"
-        options={{ title: 'Nilai Tugas', tabBarLabel: 'Nilai', tabBarIcon: ({ color }) => <TabIcon emoji="⭐" color={color} /> }}
-      />
-      <Tabs.Screen
-        name="attendance"
-        options={{ title: 'Absensi', tabBarLabel: 'Absensi', tabBarIcon: ({ color }) => <TabIcon emoji="✅" color={color} /> }}
-      />
+      <Tabs.Screen name="dashboard"        options={{ title: 'Beranda', tabBarIcon: ({ focused }) => tabIcon('home', focused) }} />
+      <Tabs.Screen name="upload-material"  options={{ title: 'Materi',  tabBarIcon: ({ focused }) => tabIcon('cloud-upload', focused) }} />
+      <Tabs.Screen name="assignments/create" options={{ title: 'Tugas', tabBarIcon: ({ focused }) => tabIcon('create', focused) }} />
+      <Tabs.Screen name="assignments/grade"  options={{ title: 'Nilai', tabBarIcon: ({ focused }) => tabIcon('checkmark-circle', focused) }} />
+      <Tabs.Screen name="attendance"       options={{ title: 'Absensi', tabBarIcon: ({ focused }) => tabIcon('list', focused) }} />
     </Tabs>
   );
 }
-
-const TabIcon = ({ emoji, color }: { emoji: string; color: string }) => {
-  const { Text } = require('react-native');
-  return <Text style={{ fontSize: 20, opacity: color === '#94A3B8' ? 0.5 : 1 }}>{emoji}</Text>;
-};
