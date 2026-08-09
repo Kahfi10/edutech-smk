@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity, Modal,
+  View, Text, FlatList, StyleSheet, TouchableOpacity,
   TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { getCollection, addDocument, subscribeCollection, where } from '../../..
 import { uploadFile } from '../../../src/firebase/storage.service';
 import { Badge } from '../../../src/components/ui/Badge';
 import { Button } from '../../../src/components/ui/Button';
+import { BottomSheet } from '../../../src/components/shared/BottomSheet';
 import { LoadingSpinner } from '../../../src/components/ui/LoadingSpinner';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../../src/constants/theme';
 import { Timestamp } from 'firebase/firestore';
@@ -133,33 +134,30 @@ export default function AssignmentsScreen() {
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       />
 
-      <Modal visible={modal} animationType="slide" transparent>
-        <View style={styles.overlay}>
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-            <Text style={styles.sheetTitle} numberOfLines={2}>{selected?.title}</Text>
-            <Text style={styles.sheetDesc}>{selected?.description}</Text>
+      <BottomSheet visible={modal} onClose={() => setModal(false)}>
+        <Text style={styles.sheetTitle} numberOfLines={2}>{selected?.title}</Text>
+        <Text style={styles.sheetDesc}>{selected?.description}</Text>
 
-            <Text style={styles.label}>Jawaban Teks</Text>
-            <TextInput
-              style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
-              value={textAnswer} onChangeText={setTextAnswer}
-              multiline placeholder="Tulis jawaban di sini..." placeholderTextColor={Colors.gray7}
-            />
+        <Text style={styles.label}>Jawaban Teks</Text>
+        <TextInput
+          style={[styles.input, { height: 100, textAlignVertical: 'top' }]}
+          value={textAnswer} onChangeText={setTextAnswer}
+          multiline placeholder="Tulis jawaban di sini..." placeholderTextColor={Colors.gray7}
+          returnKeyType="done"
+        />
 
-            <TouchableOpacity style={styles.fileBtn} onPress={pickFile}>
-              <Ionicons name="attach-outline" size={20} color={Colors.gray5} />
-              <Text style={styles.fileBtnText} numberOfLines={1}>
-                {selectedFile ? selectedFile.name : 'Lampirkan File (opsional)'}
-              </Text>
-            </TouchableOpacity>
+        <TouchableOpacity style={styles.fileBtn} onPress={pickFile}>
+          <Ionicons name="attach-outline" size={20} color={Colors.gray5} />
+          <Text style={styles.fileBtnText} numberOfLines={1}>
+            {selectedFile ? selectedFile.name : 'Lampirkan File (opsional)'}
+          </Text>
+        </TouchableOpacity>
 
-            <View style={styles.btns}>
-              <Button title="Batal" onPress={() => setModal(false)} variant="ghost" style={{ flex: 1 }} />
-              <Button title="Kumpulkan" onPress={handleSubmit} loading={submitting} style={{ flex: 1 }} />
-            </View>
-          </View>
+        <View style={styles.btns}>
+          <Button title="Batal" onPress={() => setModal(false)} variant="ghost" style={{ flex: 1 }} />
+          <Button title="Kumpulkan" onPress={handleSubmit} loading={submitting} style={{ flex: 1 }} />
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 }

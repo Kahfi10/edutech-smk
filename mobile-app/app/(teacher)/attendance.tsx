@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

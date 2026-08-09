@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+﻿import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../src/constants/theme';
 
@@ -15,6 +15,7 @@ export default function StudentLayout() {
         headerShown: false,
         tabBarActiveTintColor: Colors.black,
         tabBarInactiveTintColor: Colors.gray7,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: Colors.cardBackground,
           borderTopColor: Colors.separator,

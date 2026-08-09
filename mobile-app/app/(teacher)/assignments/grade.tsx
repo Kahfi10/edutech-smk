@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity, Modal, TextInput, Alert,
+  View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { getCollection, updateDocument, where } from '../../../src/firebase/fire
 import { Button } from '../../../src/components/ui/Button';
 import { Badge } from '../../../src/components/ui/Badge';
 import { LoadingSpinner } from '../../../src/components/ui/LoadingSpinner';
+import { BottomSheet } from '../../../src/components/shared/BottomSheet';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../../src/constants/theme';
 
 export default function GradeAssignmentScreen() {
@@ -157,29 +158,27 @@ export default function GradeAssignmentScreen() {
         )}
       />
 
-      <Modal visible={modal} animationType="slide" transparent>
-        <View style={styles.overlay}>
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-            <Text style={styles.sheetTitle}>Beri Nilai</Text>
-            <Text style={styles.sheetSub}>{students[gradingSub?.studentId]?.name}</Text>
-            <Text style={styles.label}>Nilai (0 - {selected?.maxScore})</Text>
-            <TextInput
-              style={styles.scoreInput} value={score} onChangeText={setScore}
-              keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.gray7}
-            />
-            <Text style={styles.label}>Feedback (opsional)</Text>
-            <TextInput
-              style={[styles.scoreInput, { height: 80, textAlignVertical: 'top' }]}
-              value={feedback} onChangeText={setFeedback} multiline
-              placeholder="Catatan untuk siswa..." placeholderTextColor={Colors.gray7}
-            />
-            <View style={styles.btns}>
-              <Button title="Batal" onPress={() => setModal(false)} variant="ghost" style={{ flex: 1 }} />
-              <Button title="Simpan" onPress={saveGrade} loading={saving} style={{ flex: 1 }} />
-            </View>
-          </View>
+      <BottomSheet visible={modal} onClose={() => setModal(false)}>
+        <Text style={styles.sheetTitle}>Beri Nilai</Text>
+        <Text style={styles.sheetSub}>{students[gradingSub?.studentId]?.name}</Text>
+        <Text style={styles.label}>Nilai (0 - {selected?.maxScore})</Text>
+        <TextInput
+          style={styles.scoreInput} value={score} onChangeText={setScore}
+          keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.gray7}
+          returnKeyType="next" autoFocus
+        />
+        <Text style={styles.label}>Feedback (opsional)</Text>
+        <TextInput
+          style={[styles.scoreInput, { height: 90, textAlignVertical: 'top' }]}
+          value={feedback} onChangeText={setFeedback} multiline
+          placeholder="Catatan untuk siswa..." placeholderTextColor={Colors.gray7}
+          returnKeyType="done"
+        />
+        <View style={styles.btns}>
+          <Button title="Batal" onPress={() => setModal(false)} variant="ghost" style={{ flex: 1 }} />
+          <Button title="Simpan" onPress={saveGrade} loading={saving} style={{ flex: 1 }} />
         </View>
-      </Modal>
+      </BottomSheet>
     </View>
   );
 }

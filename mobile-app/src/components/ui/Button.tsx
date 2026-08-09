@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   TouchableOpacity, Text, ActivityIndicator,
-  StyleSheet, ViewStyle, TextStyle,
+  StyleSheet, ViewStyle, TextStyle, Animated,
 } from 'react-native';
 import { Colors, Radius, Typography } from '../../constants/theme';
 
@@ -21,27 +21,35 @@ export const Button: React.FC<ButtonProps> = ({
   title, onPress, variant = 'primary', loading = false,
   disabled = false, fullWidth = false, style, textStyle, size = 'md',
 }) => {
-  const v = (variant === 'danger' ? 'destructive' : variant) as 'primary' | 'secondary' | 'ghost' | 'destructive';
+  const scale = useRef(new Animated.Value(1)).current;
+  const v = (variant === 'danger' ? 'destructive' : variant) as
+    'primary' | 'secondary' | 'ghost' | 'destructive';
   const isDisabled = disabled || loading;
+
+  const pressIn  = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, damping: 15, stiffness: 400 }).start();
+  const pressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true, damping: 15, stiffness: 400 }).start();
+
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={isDisabled}
-      activeOpacity={0.7}
-      style={[
-        styles.base,
-        styles[v],
-        styles[`size_${size}`],
-        fullWidth && styles.fullWidth,
-        isDisabled && styles.disabled,
-        style,
-      ]}
-    >
-      {loading
-        ? <ActivityIndicator color={v === 'ghost' ? Colors.black : Colors.white} size="small" />
-        : <Text style={[styles.text, styles[`text_${v}`], textStyle]}>{title}</Text>
-      }
-    </TouchableOpacity>
+    <Animated.View style={[fullWidth && styles.fullWidth, { transform: [{ scale }] }, style]}>
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={pressIn}
+        onPressOut={pressOut}
+        disabled={isDisabled}
+        activeOpacity={1}
+        style={[
+          styles.base,
+          styles[v],
+          styles[`size_${size}`],
+          isDisabled && styles.disabled,
+        ]}
+      >
+        {loading
+          ? <ActivityIndicator color={v === 'ghost' ? Colors.black : Colors.white} size="small" />
+          : <Text style={[styles.text, styles[`text_${v}`], textStyle]}>{title}</Text>
+        }
+      </TouchableOpacity>
+    </Animated.View>
   );
 };
 
@@ -55,7 +63,6 @@ const styles = StyleSheet.create({
   fullWidth: { width: '100%' },
   disabled: { opacity: 0.35 },
 
-  // Variants
   primary:     { backgroundColor: Colors.black },
   secondary:   { backgroundColor: Colors.gray2 },
   ghost: {
@@ -65,13 +72,11 @@ const styles = StyleSheet.create({
   },
   destructive: { backgroundColor: Colors.gray1 },
 
-  // Sizes
   size_sm: { paddingVertical: 8,  paddingHorizontal: 14, minHeight: 36 },
   size_md: { paddingVertical: 13, paddingHorizontal: 20, minHeight: 50 },
   size_lg: { paddingVertical: 16, paddingHorizontal: 24, minHeight: 56 },
 
-  // Text
-  text: { ...Typography.headline, letterSpacing: -0.2 },
+  text: { fontSize: 15, fontWeight: '600', letterSpacing: -0.2 },
   text_primary:     { color: Colors.white },
   text_secondary:   { color: Colors.white },
   text_ghost:       { color: Colors.black },

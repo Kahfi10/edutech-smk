@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity, Modal,
+  View, Text, FlatList, StyleSheet, TouchableOpacity,
   TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { getCollection, addDocument, where } from '../../src/firebase/firestore.service';
 import { Button } from '../../src/components/ui/Button';
+import { BottomSheet } from '../../src/components/shared/BottomSheet';
 import { Badge } from '../../src/components/ui/Badge';
 import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
@@ -115,60 +116,49 @@ export default function WaliViolationsScreen() {
         ItemSeparatorComponent={() => <View style={styles.sep} />}
       />
 
-      <Modal visible={modal} animationType="slide" transparent>
-        <View style={styles.overlay}>
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-            <Text style={styles.sheetTitle}>Catat Pelanggaran</Text>
+      <BottomSheet visible={modal} onClose={() => setModal(false)}>
+        <Text style={styles.sheetTitle}>Catat Pelanggaran</Text>
 
-            <Text style={styles.label}>Siswa</Text>
-            <FlatList
-              horizontal data={students} keyExtractor={i => i.uid}
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[styles.chip, selectedSid === item.uid && styles.chipActive]}
-                  onPress={() => setSelectedSid(item.uid)}
-                >
-                  <Text style={[styles.chipText, selectedSid === item.uid && styles.chipTextActive]}>
-                    {item.name.split(' ')[0]}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
+        <Text style={styles.label}>Siswa</Text>
+        <FlatList
+          horizontal data={students} keyExtractor={i => i.uid}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingBottom: 4 }}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={[styles.chip, selectedSid === item.uid && styles.chipActive]} onPress={() => setSelectedSid(item.uid)}>
+              <Text style={[styles.chipText, selectedSid === item.uid && styles.chipTextActive]}>{item.name.split(' ')[0]}</Text>
+            </TouchableOpacity>
+          )}
+        />
 
-            <Text style={styles.label}>Kategori</Text>
-            <View style={styles.catRow}>
-              {CATEGORIES.map(c => (
-                <TouchableOpacity key={c}
-                  style={[styles.chip, category === c && styles.chipActive]}
-                  onPress={() => setCategory(c)}
-                >
-                  <Text style={[styles.chipText, category === c && styles.chipTextActive]}>{c}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={styles.label}>Deskripsi</Text>
-            <TextInput
-              style={styles.input} value={desc} onChangeText={setDesc}
-              placeholder="Jelaskan pelanggaran..." placeholderTextColor={Colors.gray7}
-              multiline
-            />
-
-            <Text style={styles.label}>Poin</Text>
-            <TextInput
-              style={[styles.input, { width: 80 }]}
-              value={points} onChangeText={setPoints} keyboardType="numeric"
-            />
-
-            <View style={styles.btns}>
-              <Button title="Batal" onPress={() => setModal(false)} variant="ghost" style={{ flex: 1 }} />
-              <Button title="Simpan" onPress={handleAdd} loading={saving} style={{ flex: 1 }} />
-            </View>
-          </View>
+        <Text style={styles.label}>Kategori</Text>
+        <View style={styles.catRow}>
+          {CATEGORIES.map(c => (
+            <TouchableOpacity key={c} style={[styles.chip, category === c && styles.chipActive]} onPress={() => setCategory(c)}>
+              <Text style={[styles.chipText, category === c && styles.chipTextActive]}>{c}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </Modal>
+
+        <Text style={styles.label}>Deskripsi</Text>
+        <TextInput
+          style={[styles.input, { minHeight: 80, textAlignVertical: 'top' }]}
+          value={desc} onChangeText={setDesc}
+          placeholder="Jelaskan pelanggaran..." placeholderTextColor={Colors.gray7}
+          multiline returnKeyType="done"
+        />
+
+        <Text style={styles.label}>Poin</Text>
+        <TextInput
+          style={[styles.input, { width: 80 }]}
+          value={points} onChangeText={setPoints} keyboardType="numeric" returnKeyType="done"
+        />
+
+        <View style={styles.btns}>
+          <Button title="Batal" onPress={() => setModal(false)} variant="ghost" style={{ flex: 1 }} />
+          <Button title="Simpan" onPress={handleAdd} loading={saving} style={{ flex: 1 }} />
+        </View>
+      </BottomSheet>
     </View>
   );
 }

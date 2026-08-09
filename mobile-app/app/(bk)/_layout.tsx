@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+﻿import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet } from 'react-native';
 import { Colors } from '../../src/constants/theme';
@@ -16,6 +16,7 @@ export default function BKLayout() {
         tabBarActiveTintColor: Colors.black,
         tabBarInactiveTintColor: Colors.gray7,
         tabBarStyle: { backgroundColor: Colors.cardBackground, borderTopColor: Colors.separator, borderTopWidth: StyleSheet.hairlineWidth },
+        tabBarHideOnKeyboard: true,
         tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
       }}
     >

@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity, Modal, TextInput, Alert,
+  View, Text, FlatList, StyleSheet, TouchableOpacity, TextInput, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { subscribeCollection, getCollection, setDocument, updateDocument, where } from '../../src/firebase/firestore.service';
 import { Button } from '../../src/components/ui/Button';
+import { BottomSheet } from '../../src/components/shared/BottomSheet';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 import { Timestamp } from 'firebase/firestore';
 
@@ -131,47 +132,38 @@ export default function DailyLogScreen() {
       />
 
       {/* Modal tambah kejadian */}
-      <Modal visible={modal} animationType="slide" transparent>
-        <View style={styles.overlay}>
-          <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
-            <Text style={styles.sheetTitle}>Catat Kejadian</Text>
+      <BottomSheet visible={modal} onClose={() => setModal(false)}>
+        <Text style={styles.sheetTitle}>Catat Kejadian</Text>
 
-            <Text style={styles.label}>Tipe Kejadian</Text>
-            <View style={styles.typeRow}>
-              {EVENT_TYPES.map(et => (
-                <TouchableOpacity
-                  key={et.key}
-                  style={[styles.chip, eventType === et.key && styles.chipActive]}
-                  onPress={() => setEventType(et.key)}
-                >
-                  <Text style={[styles.chipText, eventType === et.key && styles.chipTextActive]}>
-                    {et.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={styles.label}>NIS Siswa (opsional)</Text>
-            <TextInput
-              style={styles.input} value={studentNis} onChangeText={setStudentNis}
-              placeholder="Contoh: 2024001" keyboardType="numeric"
-              placeholderTextColor={Colors.gray7}
-            />
-
-            <Text style={styles.label}>Keterangan</Text>
-            <TextInput
-              style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-              value={desc} onChangeText={setDesc} multiline
-              placeholder="Jelaskan kejadian..." placeholderTextColor={Colors.gray7}
-            />
-
-            <View style={styles.btns}>
-              <Button title="Batal" onPress={() => setModal(false)} variant="ghost" style={{ flex: 1 }} />
-              <Button title="Simpan" onPress={addEvent} loading={saving} style={{ flex: 1 }} />
-            </View>
-          </View>
+        <Text style={styles.label}>Tipe Kejadian</Text>
+        <View style={styles.typeRow}>
+          {EVENT_TYPES.map(et => (
+            <TouchableOpacity key={et.key} style={[styles.chip, eventType === et.key && styles.chipActive]} onPress={() => setEventType(et.key)}>
+              <Text style={[styles.chipText, eventType === et.key && styles.chipTextActive]}>{et.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      </Modal>
+
+        <Text style={styles.label}>NIS Siswa (opsional)</Text>
+        <TextInput
+          style={styles.input} value={studentNis} onChangeText={setStudentNis}
+          placeholder="Contoh: 2024001" keyboardType="numeric"
+          placeholderTextColor={Colors.gray7} returnKeyType="next"
+        />
+
+        <Text style={styles.label}>Keterangan</Text>
+        <TextInput
+          style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+          value={desc} onChangeText={setDesc} multiline
+          placeholder="Jelaskan kejadian..." placeholderTextColor={Colors.gray7}
+          returnKeyType="done"
+        />
+
+        <View style={styles.btns}>
+          <Button title="Batal" onPress={() => setModal(false)} variant="ghost" style={{ flex: 1 }} />
+          <Button title="Simpan" onPress={addEvent} loading={saving} style={{ flex: 1 }} />
+        </View>
+      </BottomSheet>
     </View>
   );
 }
