@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform,
 } from 'react-native';
@@ -69,7 +69,7 @@ export default function BKChatScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>💬 Chat Konfidensial BK</Text>
+          <Text style={styles.headerTitle}> Chat Konfidensial BK</Text>
           <Text style={styles.headerSub}>Pilih siswa untuk memulai chat rahasia</Text>
         </View>
         <FlatList
@@ -110,7 +110,7 @@ export default function BKChatScreen() {
         </View>
         <View>
           <Text style={styles.chatName}>{selectedStudent.name}</Text>
-          <Text style={styles.confidentialLabel}>🔒 Chat Konfidensial</Text>
+          <Text style={styles.confidentialLabel}> Chat Konfidensial</Text>
         </View>
       </View>
 

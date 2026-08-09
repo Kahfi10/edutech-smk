@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SEED DATA SCRIPT — Jalankan sekali untuk populate Firestore
  * 
  * Cara pakai:
@@ -101,7 +101,7 @@ const SEED_USERS = [
 ];
 
 async function seed() {
-  console.log('🌱 Memulai seed data...');
+  console.log(' Memulai seed data...');
   const uids: Record<string, string> = {};
 
   // 1. Buat users
@@ -116,12 +116,12 @@ async function seed() {
         email: u.email,
         createdAt: Timestamp.now(),
       });
-      console.log(`✅ User ${u.profile.role}: ${u.email}`);
+      console.log(` User ${u.profile.role}: ${u.email}`);
     } catch (e: any) {
       if (e.code === 'auth/email-already-in-use') {
-        console.log(`⚠️  ${u.email} sudah ada, skip.`);
+        console.log(`  ${u.email} sudah ada, skip.`);
       } else {
-        console.error(`❌ ${u.email}:`, e.message);
+        console.error(` ${u.email}:`, e.message);
       }
     }
   }
@@ -132,7 +132,7 @@ async function seed() {
     waliId: uids['WALI'] || 'placeholder_wali',
     studentIds: [uids['STUDENT'] || 'placeholder_student'],
   });
-  console.log('✅ Kelas XI-RPL-1');
+  console.log(' Kelas XI-RPL-1');
 
   // 3. Buat mata pelajaran
   await setDoc(doc(db, 'subjects', 'subj_pemweb'), {
@@ -145,7 +145,7 @@ async function seed() {
     teacherId: uids['TEACHER'] || 'placeholder_teacher',
     classIds: ['class_xi_rpl_1'],
   });
-  console.log('✅ Mata pelajaran');
+  console.log(' Mata pelajaran');
 
   // 4. Buat materi contoh
   await addDoc(collection(db, 'materials'), {
@@ -158,7 +158,7 @@ async function seed() {
     uploadedBy: uids['TEACHER'] || 'placeholder_teacher',
     createdAt: Timestamp.now(),
   });
-  console.log('✅ Materi contoh');
+  console.log(' Materi contoh');
 
   // 5. Buat tugas contoh
   const deadline = new Date();
@@ -173,7 +173,7 @@ async function seed() {
     createdBy: uids['TEACHER'] || 'placeholder_teacher',
     createdAt: Timestamp.now(),
   });
-  console.log('✅ Tugas contoh');
+  console.log(' Tugas contoh');
 
   // 6. Buat pengumuman contoh
   await addDoc(collection(db, 'announcements'), {
@@ -183,10 +183,10 @@ async function seed() {
     isUrgent: false,
     createdAt: Timestamp.now(),
   });
-  console.log('✅ Pengumuman contoh');
+  console.log(' Pengumuman contoh');
 
-  console.log('\n🎉 Seed selesai!');
-  console.log('\n📋 Akun login:');
+  console.log('\n Seed selesai!');
+  console.log('\n Akun login:');
   SEED_USERS.forEach(u => {
     console.log(`  ${u.profile.role.padEnd(8)}: ${u.email} / ${u.password}`);
   });

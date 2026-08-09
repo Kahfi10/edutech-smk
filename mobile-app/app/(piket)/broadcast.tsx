@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { addDocument } from '../../src/firebase/firestore.service';
 import { Button } from '../../src/components/ui/Button';
+import { Colors } from '../../src/constants/theme';
 import { Timestamp } from 'firebase/firestore';
 
 export default function BroadcastScreen() {
@@ -30,7 +32,7 @@ export default function BroadcastScreen() {
     if (!body.trim()) return Alert.alert('Perhatian', 'Isi pengumuman wajib diisi.');
 
     Alert.alert(
-      isUrgent ? '🚨 Kirim Darurat?' : 'Konfirmasi Broadcast',
+      isUrgent ? 'Kirim Darurat?' : 'Konfirmasi Broadcast',
       `Kirim ke: ${ROLE_LABELS[targetRole] ?? 'Semua'}\n\n"${title}"`,
       [
         { text: 'Batal', style: 'cancel' },
@@ -67,7 +69,7 @@ export default function BroadcastScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📢 Broadcast Pengumuman</Text>
+        <Text style={styles.headerTitle}>Broadcast Pengumuman</Text>
         <Text style={styles.headerSub}>Kirim pengumuman ke seluruh warga sekolah</Text>
       </View>
 
@@ -76,7 +78,9 @@ export default function BroadcastScreen() {
         style={[styles.urgentToggle, isUrgent && styles.urgentToggleActive]}
         onPress={() => setIsUrgent(!isUrgent)}
       >
-        <Text style={styles.urgentIcon}>{isUrgent ? '🚨' : '🔔'}</Text>
+        <View style={styles.urgentIconBox}>
+          <Ionicons name={isUrgent ? 'alert-circle' : 'notifications-outline'} size={24} color={isUrgent ? Colors.gray1 : Colors.gray5} />
+        </View>
         <View>
           <Text style={[styles.urgentLabel, isUrgent && styles.urgentLabelActive]}>
             {isUrgent ? 'MODE DARURAT AKTIF' : 'Pengumuman Biasa'}
@@ -126,7 +130,7 @@ export default function BroadcastScreen() {
       />
 
       <Button
-        title={isUrgent ? '🚨 Kirim Darurat Sekarang' : '📢 Kirim Pengumuman'}
+        title={isUrgent ? 'Kirim Darurat Sekarang' : 'Kirim Pengumuman'}
         onPress={handleBroadcast}
         loading={sending}
         fullWidth
@@ -161,7 +165,7 @@ const styles = StyleSheet.create({
     borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 2, borderColor: '#E2E8F0', marginBottom: 16,
   },
   urgentToggleActive: { backgroundColor: '#FEF2F2', borderColor: '#DC2626' },
-  urgentIcon: { fontSize: 28 },
+  urgentIconBox: { alignItems: 'center', justifyContent: 'center', width: 36, height: 36 },
   urgentLabel: { fontSize: 14, fontWeight: '700', color: '#374151' },
   urgentLabelActive: { color: '#DC2626' },
   urgentSub: { fontSize: 11, color: '#94A3B8', marginTop: 1 },

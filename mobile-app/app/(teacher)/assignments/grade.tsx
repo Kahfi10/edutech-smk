@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, FlatList, Alert, TouchableOpacity, Modal,
 } from 'react-native';
@@ -108,7 +108,7 @@ export default function GradeAssignmentScreen() {
                   {item.textAnswer && (
                     <Text style={styles.answerPreview} numberOfLines={2}>{item.textAnswer}</Text>
                   )}
-                  {item.fileUrl && <Text style={styles.fileLink}>📎 File terlampir</Text>}
+                  {item.fileUrl && <Text style={styles.fileLink}> File terlampir</Text>}
                 </View>
                 <View style={styles.gradeArea}>
                   {item.status === 'graded' ? (

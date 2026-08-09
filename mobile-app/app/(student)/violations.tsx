@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { getCollection, where, orderBy } from '../../src/firebase/firestore.service';
@@ -43,7 +43,7 @@ export default function ViolationsScreen() {
           <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: barColor }]} />
         </View>
         {totalPoints >= 80 && (
-          <Text style={styles.warning}>⚠️ Poin hampir mencapai batas! Segera hubungi Guru BK.</Text>
+          <Text style={styles.warning}> Poin hampir mencapai batas! Segera hubungi Guru BK.</Text>
         )}
       </View>
 
@@ -51,7 +51,7 @@ export default function ViolationsScreen() {
         data={violations}
         keyExtractor={i => i.id}
         contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>Tidak ada catatan pelanggaran 🎉</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>Tidak ada catatan pelanggaran </Text>}
         renderItem={({ item }) => (
           <View style={styles.row}>
             <View style={{ flex: 1 }}>

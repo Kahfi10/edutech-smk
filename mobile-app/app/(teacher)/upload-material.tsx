@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, StyleSheet, ScrollView,
   Alert, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../src/context/AuthContext';
 import { uploadFile } from '../../src/firebase/storage.service';
@@ -95,7 +96,7 @@ export default function UploadMaterialScreen() {
               onPress={() => setType(t)}
             >
               <Text style={[styles.typeText, type === t && styles.typeTextActive]}>
-                {t === 'pdf' ? '📄 PDF' : '🎥 Video'}
+                {t === 'pdf' ? 'PDF' : 'Video'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -159,7 +160,7 @@ export default function UploadMaterialScreen() {
         {/* File Picker */}
         <TouchableOpacity style={styles.filePickerBtn} onPress={pickFile}>
           <Text style={styles.filePickerText}>
-            {selectedFile ? `📎 ${selectedFile.name}` : `🔍 Pilih File ${type.toUpperCase()}`}
+            {selectedFile ? selectedFile.name : `Pilih File ${type.toUpperCase()}`}
           </Text>
         </TouchableOpacity>
 
@@ -185,7 +186,7 @@ export default function UploadMaterialScreen() {
       {recentMaterials.map(m => (
         <Card key={m.id}>
           <View style={styles.materialRow}>
-            <Text style={styles.materialIcon}>{m.type === 'pdf' ? '📄' : '🎥'}</Text>
+            <Ionicons name={m.type === 'pdf' ? 'document-text-outline' : 'play-circle-outline'} size={28} color="#64748B" />
             <View style={{ flex: 1 }}>
               <Text style={styles.materialTitle}>{m.title}</Text>
               <Text style={styles.materialSub}>{m.type.toUpperCase()}</Text>

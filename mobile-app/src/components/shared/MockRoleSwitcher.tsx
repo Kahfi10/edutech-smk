@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MockRoleSwitcher — hanya muncul saat USE_MOCK = true
  * Panel debug di pojok bawah untuk ganti role tanpa login
  */

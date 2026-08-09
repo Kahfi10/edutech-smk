@@ -1,23 +1,28 @@
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, Platform } from 'react-native';
 import { AuthProvider } from '../src/context/AuthContext';
 import { StatusBar } from 'expo-status-bar';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperTheme } from '../src/constants/paperTheme';
-import { registerForPushNotifications, setupNotificationListeners } from '../src/services/fcm.service';
 import { MockRoleSwitcher } from '../src/components/shared/MockRoleSwitcher';
 import { USE_MOCK } from '../src/constants/mockData';
 
 export default function RootLayout() {
   useEffect(() => {
-    if (USE_MOCK) return;           // skip FCM di mock mode
-    registerForPushNotifications();
-    const cleanup = setupNotificationListeners(
-      (n) => console.log('Notif:', n.request.content.title),
-    );
-    return cleanup;
+    // expo-notifications remote push tidak didukung di Expo Go SDK 53+
+    // Skip registrasi FCM di Expo Go, hanya aktif di production build
+    if (Platform.OS === 'web') return;
+
+    // Cek apakah berjalan di Expo Go (bukan development build)
+    const isExpoGo = typeof (global as any).__expo_module_core__ === 'undefined';
+    if (isExpoGo) return; // Skip FCM di Expo Go
+
+    import('../src/services/fcm.service').then(({ registerForPushNotifications, setupNotificationListeners }) => {
+      registerForPushNotifications();
+      setupNotificationListeners((n) => console.log('Notif:', n.request.content.title));
+    });
   }, []);
 
   return (
@@ -34,9 +39,7 @@ export default function RootLayout() {
               <Stack.Screen name="(wali)" />
               <Stack.Screen name="(bk)" />
               <Stack.Screen name="(piket)" />
-              <Stack.Screen name="(shared)" />
             </Stack>
-            {/* Floating role switcher — hanya muncul saat USE_MOCK=true */}
             <MockRoleSwitcher />
           </View>
         </AuthProvider>

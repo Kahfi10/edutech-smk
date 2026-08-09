@@ -77,10 +77,10 @@ export default function BKCasesScreen() {
               {item.status === 'pending' && (
                 <View style={styles.actions}>
                   <TouchableOpacity style={styles.verifyBtn} onPress={() => verify(item.id)}>
-                    <Text style={styles.verifyText}>✅ Verifikasi</Text>
+                    <Text style={styles.verifyText}>Verifikasi</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.rejectBtn} onPress={() => reject(item.id)}>
-                    <Text style={styles.rejectText}>❌ Tolak</Text>
+                    <Text style={styles.rejectText}>Tolak</Text>
                   </TouchableOpacity>
                 </View>
               )}

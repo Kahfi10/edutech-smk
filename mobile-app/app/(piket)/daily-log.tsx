@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity, Modal, TextInput, Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { subscribeCollection, getCollection, setDocument, updateDocument, where } from '../../src/firebase/firestore.service';
 import { Button } from '../../src/components/ui/Button';
@@ -9,9 +10,9 @@ import { Badge } from '../../src/components/ui/Badge';
 import { Timestamp } from 'firebase/firestore';
 
 const EVENT_TYPES = [
-  { key: 'terlambat', label: '⏰ Terlambat', color: '#D97706', bg: '#FFFBEB' },
-  { key: 'izin_pulang', label: '🚪 Izin Pulang', color: '#4F46E5', bg: '#EEF2FF' },
-  { key: 'kejadian', label: '⚠️ Kejadian', color: '#DC2626', bg: '#FEF2F2' },
+  { key: 'terlambat', label: 'Terlambat',   color: '#D97706', bg: '#FFFBEB' },
+  { key: 'izin_pulang', label: 'Izin Pulang', color: '#4F46E5', bg: '#EEF2FF' },
+  { key: 'kejadian', label: 'Kejadian',     color: '#DC2626', bg: '#FEF2F2' },
 ] as const;
 
 export default function DailyLogScreen() {
@@ -96,7 +97,7 @@ export default function DailyLogScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📔</Text>
+            <Ionicons name="book-outline" size={44} color="#94A3B8" />
             <Text style={styles.emptyText}>Belum ada kejadian hari ini</Text>
           </View>
         }

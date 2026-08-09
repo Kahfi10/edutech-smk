@@ -73,7 +73,7 @@ export default function BKBookingScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>💬 Konseling BK</Text>
+        <Text style={styles.infoTitle}>Konseling BK</Text>
         <Text style={styles.infoText}>
           Bimbingan Konseling bersifat rahasia. Ceritakan masalahmu dengan aman.
         </Text>
@@ -92,7 +92,7 @@ export default function BKBookingScreen() {
             <Card>
               <View style={styles.bookRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.bookType}>📋 {item.type}</Text>
+                  <Text style={styles.bookType}>{item.type}</Text>
                   <Text style={styles.bookDate}>
                     {item.scheduledAt?.toDate?.().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                   </Text>

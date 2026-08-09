@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { getCollection, where } from '../../src/firebase/firestore.service';
 import { Card } from '../../src/components/ui/Card';
@@ -83,7 +84,7 @@ export default function WaliAlertsScreen() {
     }).finally(() => setLoading(false));
   }, [profile]);
 
-  const ICON: Record<string, string> = { alpha: '📅', grade_drop: '📉', violation: '⚠️' };
+  const ICON: Record<string, string> = { alpha: 'Absensi', grade_drop: 'Nilai Turun', violation: 'Pelanggaran' };
   const LABEL: Record<string, string> = { alpha: 'Absensi', grade_drop: 'Nilai', violation: 'Pelanggaran' };
 
   if (loading) return <LoadingSpinner fullScreen />;
@@ -101,7 +102,7 @@ export default function WaliAlertsScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>✅</Text>
+            <Ionicons name="checkmark-circle-outline" size={44} color="#94A3B8" />
             <Text style={styles.emptyText}>Semua siswa dalam kondisi baik!</Text>
           </View>
         }

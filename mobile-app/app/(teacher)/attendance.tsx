@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
 } from 'react-native';
@@ -89,7 +89,7 @@ export default function AttendanceScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Text style={styles.dateText}>📅 {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+        <Text style={styles.dateText}> {new Date().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Text>
       </View>
 
       <View style={styles.filters}>

@@ -120,7 +120,7 @@ export default function AssignmentsScreen() {
               {sub?.feedback ? <Text style={styles.feedback}>Feedback: {sub.feedback}</Text> : null}
               {!sub && !isLate && (
                 <TouchableOpacity onPress={() => openSubmit(item)} style={styles.submitBtn}>
-                  <Text style={styles.submitBtnText}>📤 Kumpulkan Tugas</Text>
+                  <Text style={styles.submitBtnText}>Kumpulkan Tugas</Text>
                 </TouchableOpacity>
               )}
             </Card>
@@ -143,7 +143,7 @@ export default function AssignmentsScreen() {
 
             <TouchableOpacity style={styles.fileBtn} onPress={pickFile}>
               <Text style={styles.fileBtnText}>
-                {selectedFile ? `📎 ${selectedFile.name}` : '📂 Upload File (opsional)'}
+                {selectedFile ? selectedFile.name : 'Upload File (opsional)'}
               </Text>
             </TouchableOpacity>
 

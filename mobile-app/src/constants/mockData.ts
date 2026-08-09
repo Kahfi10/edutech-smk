@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MOCK DATA — untuk preview UI tanpa Firebase
  * USE_MOCK = false → Firebase aktif di semua platform
  * USE_MOCK = true  → UI demo tanpa Firebase (untuk development)

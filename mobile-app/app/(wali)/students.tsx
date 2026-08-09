@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet } from 'react-native';
 import { useAuth } from '../../src/context/AuthContext';
 import { getCollection, where } from '../../src/firebase/firestore.service';
@@ -72,7 +72,7 @@ export default function WaliStudentsScreen() {
                 </View>
               </View>
             </View>
-            {hasAlert && <Badge label="⚠️" bg="#FEF2F2" color="#DC2626" />}
+            {hasAlert && <Badge label="" bg="#FEF2F2" color="#DC2626" />}
           </View>
         );
       }}
