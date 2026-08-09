@@ -1,28 +1,23 @@
 const { getDefaultConfig } = require('expo/metro-config');
-const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
+// Expo sudah aktifkan unstable_enablePackageExports = true
+// Tapi unstable_conditionNames kosong — Metro tidak tahu pakai kondisi 'react-native'
+// Akibatnya @firebase/auth tidak di-resolve ke dist/rn/index.js
+//
+// FIX: tambahkan 'react-native' ke conditionNames
+// Sehingga @firebase/auth → dist/rn/index.js (ada getReactNativePersistence)
+config.resolver.unstable_conditionNames = [
+  'react-native',
+  'require',
+  'default',
+];
 
-const RN_AUTH_BUNDLE = path.resolve(
-  __dirname,
-  'node_modules/@firebase/auth/dist/rn/index.js'
-);
-
-// Map KEDUA nama modul Firebase Auth ke RN bundle saat platform bukan web
-// - 'firebase/auth'  → static import di config.ts
-// - '@firebase/auth' → re-export internal dari firebase/auth
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (platform !== 'web') {
-    if (
-      moduleName === 'firebase/auth' ||
-      moduleName === '@firebase/auth'
-    ) {
-      return { filePath: RN_AUTH_BUNDLE, type: 'sourceFile' };
-    }
-  }
-  return context.resolveRequest(context, moduleName, platform);
-};
+config.resolver.resolverMainFields = [
+  'react-native',
+  'browser',
+  'main',
+];
 
 module.exports = config;

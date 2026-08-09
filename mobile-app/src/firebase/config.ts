@@ -13,18 +13,27 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Metro maps firebase/auth → @firebase/auth/dist/rn/index.js (platform !== web)
-// Sehingga getReactNativePersistence tersedia di RN
+// Dengan unstable_conditionNames: ['react-native', ...] di metro.config.js,
+// @firebase/auth di-resolve ke dist/rn/index.js yang punya getReactNativePersistence
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { initializeAuth, getAuth, getReactNativePersistence } = require('firebase/auth');
+const firebaseAuth = require('@firebase/auth');
+const { initializeAuth, getAuth, getReactNativePersistence } = firebaseAuth;
 
 let auth: ReturnType<typeof getAuth>;
 try {
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage),
-  });
+  if (typeof getReactNativePersistence === 'function') {
+    // RN bundle tersedia → pakai AsyncStorage persistence
+    auth = initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } else {
+    // Web bundle fallback → inMemoryPersistence
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { inMemoryPersistence } = require('@firebase/auth');
+    auth = initializeAuth(app, { persistence: inMemoryPersistence });
+  }
 } catch {
-  // Hot reload: auth sudah teregistrasi sebelumnya
+  // Hot reload: auth sudah diregistrasi sebelumnya
   auth = getAuth(app);
 }
 
