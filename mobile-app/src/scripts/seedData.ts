@@ -471,6 +471,8 @@ async function main() {
   await seedChats(uids);
   await seedPiketLogs(uids);
   await seedAnnouncements(uids);
+  await seedQuizzes(uids);
+  await seedSchedules();
 
   console.log('\n' + '='.repeat(55));
   console.log('  SEED SELESAI!');
@@ -494,9 +496,114 @@ async function main() {
   console.log('  - Login sbg Guru BK: ada booking konseling + chat dengan Doni');
   console.log('  - Login sbg Guru Mapel: nilai submissions, upload materi baru');
   console.log('  - Login sbg Piket: lihat log kejadian harian');
+  console.log('  - Login sbg Siswa: kerjakan kuis online, lihat jadwal pelajaran, chat guru');
   console.log('  - Tekan W → buka web → Login sbg Admin');
 
   process.exit(0);
+}
+
+// ─── Quizzes ──────────────────────────────────────────────────────
+async function seedQuizzes(uids: Record<string, string>) {
+  console.log('\n--- SEEDING QUIZZES ---');
+  const t1 = uids['guru.mapel@edutechsmk.sch.id'] ?? 'unknown';
+
+  const quizzes = [
+    {
+      title: 'Kuis 1 — HTML & CSS Dasar',
+      duration: 30,
+      subjectId: 'subj_pemweb',
+      classId: 'class_xi_rpl_1',
+      createdBy: t1,
+      deadline: daysFrom(5),
+      questions: [
+        { question: 'Apa kepanjangan dari HTML?', options: ['HyperText Markup Language', 'High-Level Text Machine Language', 'HyperText Machine Learning', 'High-Text Markup Language'], correct: 0 },
+        { question: 'Tag HTML yang digunakan untuk membuat heading terbesar adalah?', options: ['<h6>', '<h1>', '<header>', '<head>'], correct: 1 },
+        { question: 'Property CSS untuk mengubah warna teks adalah?', options: ['background-color', 'font-color', 'color', 'text-color'], correct: 2 },
+        { question: 'Selector CSS yang menggunakan titik (.) adalah untuk?', options: ['ID selector', 'Element selector', 'Class selector', 'Universal selector'], correct: 2 },
+        { question: 'Tag HTML untuk membuat tautan/link adalah?', options: ['<link>', '<a>', '<href>', '<url>'], correct: 1 },
+        { question: 'Property CSS untuk mengatur jarak di dalam elemen disebut?', options: ['margin', 'spacing', 'padding', 'border'], correct: 2 },
+        { question: 'Nilai display CSS yang membuat elemen menjadi blok baru adalah?', options: ['inline', 'block', 'flex', 'none'], correct: 1 },
+        { question: 'Tag HTML yang digunakan untuk gambar adalah?', options: ['<picture>', '<image>', '<img>', '<photo>'], correct: 2 },
+        { question: 'Flexbox menggunakan property apa untuk mengatur arah utama?', options: ['flex-wrap', 'flex-direction', 'align-items', 'justify-items'], correct: 1 },
+        { question: 'Nilai CSS position yang mengikuti scroll halaman adalah?', options: ['absolute', 'relative', 'fixed', 'sticky'], correct: 2 },
+      ],
+    },
+    {
+      title: 'Kuis 2 — JavaScript Dasar',
+      duration: 45,
+      subjectId: 'subj_pemweb',
+      classId: 'class_xi_rpl_1',
+      createdBy: t1,
+      deadline: daysFrom(10),
+      questions: [
+        { question: 'Cara mendeklarasikan variabel di JavaScript modern menggunakan?', options: ['var', 'let dan const', 'dim', 'variable'], correct: 1 },
+        { question: 'Fungsi untuk menampilkan dialog pesan di JavaScript adalah?', options: ['print()', 'console.log()', 'alert()', 'message()'], correct: 2 },
+        { question: 'Tipe data yang menampung kumpulan item berurutan disebut?', options: ['Object', 'Array', 'String', 'Number'], correct: 1 },
+        { question: 'Arrow function ditulis dengan simbol?', options: ['->', '=>', '::', '->()'], correct: 1 },
+        { question: 'Method array untuk iterasi setiap elemen adalah?', options: ['each()', 'forEach()', 'loop()', 'iterate()'], correct: 1 },
+        { question: 'Operator spread dalam JavaScript dilambangkan dengan?', options: ['**', '...', '??', '::'], correct: 1 },
+        { question: 'Async/await digunakan untuk menangani?', options: ['Error handling', 'Loop', 'Asynchronous operations', 'Variable declaration'], correct: 2 },
+        { question: 'localStorage.setItem() digunakan untuk?', options: ['Membaca data', 'Menyimpan data', 'Menghapus data', 'Update data'], correct: 1 },
+      ],
+    },
+    {
+      title: 'Kuis 1 — Basis Data',
+      duration: 30,
+      subjectId: 'subj_basis_data',
+      classId: 'class_xi_rpl_1',
+      createdBy: t1,
+      deadline: daysAgo(1), // sudah lewat
+      questions: [
+        { question: 'Kepanjangan dari SQL adalah?', options: ['Simple Query Language', 'Structured Query Language', 'Standard Query Language', 'System Query Language'], correct: 1 },
+        { question: 'Perintah SQL untuk mengambil data dari tabel adalah?', options: ['GET', 'FETCH', 'SELECT', 'RETRIEVE'], correct: 2 },
+        { question: 'Relasi satu-ke-banyak (one-to-many) berarti?', options: ['1 record berhubungan dengan 1 record', '1 record berhubungan dengan banyak record', 'Banyak record berhubungan dengan 1 record', 'Banyak ke banyak'], correct: 1 },
+        { question: 'PRIMARY KEY pada tabel digunakan untuk?', options: ['Kunci asing', 'Mengidentifikasi record secara unik', 'Enkripsi data', 'Indexing'], correct: 1 },
+        { question: 'Perintah untuk menggabungkan data dari dua tabel adalah?', options: ['COMBINE', 'MERGE', 'JOIN', 'UNION'], correct: 2 },
+      ],
+    },
+  ];
+
+  for (const q of quizzes) {
+    await addDoc(collection(db, 'quizzes'), { ...q, createdAt: now });
+    console.log(`  OK  Quiz: ${q.title} (${q.questions.length} soal)`);
+  }
+}
+
+// ─── Schedules ────────────────────────────────────────────────────
+async function seedSchedules() {
+  console.log('\n--- SEEDING SCHEDULES ---');
+
+  const schedules = [
+    // Senin
+    { day: 0, period: 1, subjectId: 'subj_pemweb',     subjectName: 'Pemrograman Web',   teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 1', start: '07:00', end: '07:45' },
+    { day: 0, period: 2, subjectId: 'subj_pemweb',     subjectName: 'Pemrograman Web',   teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 1', start: '07:45', end: '08:30' },
+    { day: 0, period: 3, subjectId: 'subj_basis_data', subjectName: 'Basis Data',        teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 2', start: '08:45', end: '09:30' },
+    { day: 0, period: 4, subjectId: 'subj_basis_data', subjectName: 'Basis Data',        teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 2', start: '09:30', end: '10:15' },
+    { day: 0, period: 5, subjectId: 'subj_jaringan',   subjectName: 'Jaringan Komputer', teacherName: 'Rina Marlina, S.T.', classId: 'class_xi_rpl_1',  room: 'Lab Jaringan',   start: '10:30', end: '11:15' },
+    // Selasa
+    { day: 1, period: 1, subjectId: 'subj_jaringan',   subjectName: 'Jaringan Komputer', teacherName: 'Rina Marlina, S.T.', classId: 'class_xi_rpl_1',  room: 'Lab Jaringan',   start: '07:00', end: '07:45' },
+    { day: 1, period: 2, subjectId: 'subj_jaringan',   subjectName: 'Jaringan Komputer', teacherName: 'Rina Marlina, S.T.', classId: 'class_xi_rpl_1',  room: 'Lab Jaringan',   start: '07:45', end: '08:30' },
+    { day: 1, period: 3, subjectId: 'subj_pemweb',     subjectName: 'Pemrograman Web',   teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 1', start: '08:45', end: '09:30' },
+    { day: 1, period: 4, subjectId: 'subj_pemweb',     subjectName: 'Pemrograman Web',   teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 1', start: '09:30', end: '10:15' },
+    // Rabu
+    { day: 2, period: 1, subjectId: 'subj_basis_data', subjectName: 'Basis Data',        teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 2', start: '07:00', end: '07:45' },
+    { day: 2, period: 2, subjectId: 'subj_basis_data', subjectName: 'Basis Data',        teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 2', start: '07:45', end: '08:30' },
+    { day: 2, period: 3, subjectId: 'subj_jaringan',   subjectName: 'Jaringan Komputer', teacherName: 'Rina Marlina, S.T.', classId: 'class_xi_rpl_1',  room: 'Lab Jaringan',   start: '08:45', end: '09:30' },
+    // Kamis
+    { day: 3, period: 1, subjectId: 'subj_pemweb',     subjectName: 'Pemrograman Web',   teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 1', start: '07:00', end: '07:45' },
+    { day: 3, period: 2, subjectId: 'subj_pemweb',     subjectName: 'Pemrograman Web',   teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 1', start: '07:45', end: '08:30' },
+    { day: 3, period: 3, subjectId: 'subj_basis_data', subjectName: 'Basis Data',        teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 2', start: '08:45', end: '09:30' },
+    { day: 3, period: 5, subjectId: 'subj_jaringan',   subjectName: 'Jaringan Komputer', teacherName: 'Rina Marlina, S.T.', classId: 'class_xi_rpl_1',  room: 'Lab Jaringan',   start: '10:30', end: '11:15' },
+    // Jumat
+    { day: 4, period: 1, subjectId: 'subj_basis_data', subjectName: 'Basis Data',        teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 2', start: '07:00', end: '07:45' },
+    { day: 4, period: 2, subjectId: 'subj_pemweb',     subjectName: 'Pemrograman Web',   teacherName: 'Budi Santoso, S.Kom', classId: 'class_xi_rpl_1', room: 'Lab Komputer 1', start: '07:45', end: '08:30' },
+    { day: 4, period: 3, subjectId: 'subj_jaringan',   subjectName: 'Jaringan Komputer', teacherName: 'Rina Marlina, S.T.', classId: 'class_xi_rpl_1',  room: 'Lab Jaringan',   start: '08:45', end: '09:30' },
+  ];
+
+  for (const s of schedules) {
+    await addDoc(collection(db, 'schedules'), s);
+  }
+  console.log(`  OK  ${schedules.length} jadwal (Senin-Jumat, XI-RPL-1)`);
 }
 
 main().catch(e => { console.error('FATAL:', e); process.exit(1); });
