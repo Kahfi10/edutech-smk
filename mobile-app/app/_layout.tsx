@@ -14,6 +14,7 @@ const ROLE_ROUTES: Record<string, string> = {
   WALI:    '/(wali)/dashboard',
   BK:      '/(bk)/dashboard',
   PIKET:   '/(piket)/dashboard',
+  ADMIN:   '/(admin)',
 };
 
 // AuthGuard selalu mounted — menangani redirect login/logout dari mana saja
@@ -66,6 +67,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(wali)" />
                 <Stack.Screen name="(bk)" />
                 <Stack.Screen name="(piket)" />
+              <Stack.Screen name="(admin)" />
               </Stack>
               <MockRoleSwitcher />
             </View>
