@@ -1,5 +1,4 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { initializeAuth, getAuth, inMemoryPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -14,25 +13,18 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// metro.config.js memastikan @firebase/auth → dist/rn/index.js di platform iOS/Android
-// sehingga getReactNativePersistence tersedia
+// Metro maps firebase/auth → @firebase/auth/dist/rn/index.js (platform !== web)
+// Sehingga getReactNativePersistence tersedia di RN
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { initializeAuth, getAuth, getReactNativePersistence } = require('firebase/auth');
+
 let auth: ReturnType<typeof getAuth>;
 try {
-  // Coba dapatkan getReactNativePersistence dari bundle yang sudah di-resolve Metro
-  const rnAuth = require('@firebase/auth') as any;
-  const getReactNativePersistence = rnAuth?.getReactNativePersistence;
-
-  if (typeof getReactNativePersistence === 'function') {
-    // RN bundle tersedia (iOS/Android) — gunakan AsyncStorage persistence
-    auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
-  } else {
-    // Web bundle — inMemoryPersistence
-    auth = initializeAuth(app, { persistence: inMemoryPersistence });
-  }
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
 } catch {
-  // initializeAuth sudah dipanggil (hot reload) — ambil instance yang ada
+  // Hot reload: auth sudah teregistrasi sebelumnya
   auth = getAuth(app);
 }
 

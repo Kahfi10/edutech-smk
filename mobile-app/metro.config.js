@@ -3,22 +3,25 @@ const path = require('path');
 
 const config = getDefaultConfig(__dirname);
 
-// Prioritaskan react-native field di package.json
 config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
 
-// Force @firebase/auth ke RN bundle saat platform bukan web
-// Ini menyelesaikan "Component auth has not been registered yet" di Expo Go
+const RN_AUTH_BUNDLE = path.resolve(
+  __dirname,
+  'node_modules/@firebase/auth/dist/rn/index.js'
+);
+
+// Map KEDUA nama modul Firebase Auth ke RN bundle saat platform bukan web
+// - 'firebase/auth'  → static import di config.ts
+// - '@firebase/auth' → re-export internal dari firebase/auth
 config.resolver.resolveRequest = (context, moduleName, platform) => {
-  if (moduleName === '@firebase/auth' && platform !== 'web') {
-    return {
-      filePath: path.resolve(
-        __dirname,
-        'node_modules/@firebase/auth/dist/rn/index.js'
-      ),
-      type: 'sourceFile',
-    };
+  if (platform !== 'web') {
+    if (
+      moduleName === 'firebase/auth' ||
+      moduleName === '@firebase/auth'
+    ) {
+      return { filePath: RN_AUTH_BUNDLE, type: 'sourceFile' };
+    }
   }
-  // Default resolution untuk semua modul lainnya
   return context.resolveRequest(context, moduleName, platform);
 };
 
