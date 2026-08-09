@@ -13,24 +13,22 @@ import Layout from './components/Layout';
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, adminUser, loading } = useAuth();
   if (loading) return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#F8FAFC' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 12 }}>⚙️</div>
-        <p style={{ color: '#64748B' }}>Memuat EduTech SMK Admin...</p>
+    <div style={{ display:'flex', height:'100vh', alignItems:'center', justifyContent:'center', background:'#F5F5F7' }}>
+      <div style={{ textAlign:'center' }}>
+        <div style={{ width:32, height:32, border:'2px solid #E5E5EA', borderTopColor:'#1D1D1F', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 12px' }} />
+        <p style={{ color:'#86868B', fontSize:13 }}>Memuat...</p>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
   if (!user || !adminUser) return <Navigate to="/login" replace />;
   if (adminUser.role !== 'ADMIN') return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 64 }}>🚫</div>
-        <h2>Akses Ditolak</h2>
-        <p style={{ color: '#64748B' }}>Halaman ini hanya untuk Administrator.</p>
-        <button onClick={() => window.location.href = '/login'} style={{ marginTop: 16, padding: '10px 20px', backgroundColor: '#4F46E5', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-          Kembali ke Login
-        </button>
-      </div>
+    <div style={{ display:'flex', height:'100vh', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:12, background:'#F5F5F7' }}>
+      <p style={{ fontSize:17, fontWeight:600, color:'#1D1D1F' }}>Akses Ditolak</p>
+      <p style={{ color:'#86868B' }}>Halaman ini hanya untuk Administrator.</p>
+      <button onClick={() => window.location.href='/login'} style={{ marginTop:8, padding:'8px 18px', background:'#1D1D1F', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:14, fontWeight:500 }}>
+        Kembali ke Login
+      </button>
     </div>
   );
   return <>{children}</>;
@@ -44,11 +42,11 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="users" element={<Users />} />
-            <Route path="materials" element={<Materials />} />
-            <Route path="violations" element={<Violations />} />
-            <Route path="attendance" element={<Attendance />} />
+            <Route path="dashboard"     element={<Dashboard />} />
+            <Route path="users"         element={<Users />} />
+            <Route path="materials"     element={<Materials />} />
+            <Route path="violations"    element={<Violations />} />
+            <Route path="attendance"    element={<Attendance />} />
             <Route path="announcements" element={<Announcements />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
@@ -57,5 +55,4 @@ function App() {
     </AuthProvider>
   );
 }
-
 export default App;

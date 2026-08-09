@@ -1,141 +1,130 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, getCountFromServer } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-interface Stats {
-  users: number;
-  students: number;
-  teachers: number;
-  materials: number;
-  assignments: number;
-  submissions: number;
-  violations: number;
-  counselings: number;
-}
+const StatCard = ({ label, value, sub }: { label: string; value: number; sub?: string }) => (
+  <div style={s.statCard}>
+    <p style={s.statValue}>{value}</p>
+    <p style={s.statLabel}>{label}</p>
+    {sub && <p style={s.statSub}>{sub}</p>}
+  </div>
+);
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<Stats>({
-    users: 0, students: 0, teachers: 0, materials: 0,
-    assignments: 0, submissions: 0, violations: 0, counselings: 0,
-  });
-  const [recentAnnouncements, setRecentAnnouncements] = useState<any[]>([]);
+  const [stats, setStats] = useState({ users:0, students:0, teachers:0, materials:0, assignments:0, submissions:0, violations:0, counselings:0 });
+  const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [users, materials, assignments, submissions, violations, counselings, announcements] = await Promise.all([
+        const [users, materials, assignments, submissions, violations, counselings, anns] = await Promise.all([
           getDocs(collection(db, 'users')),
-          getCountFromServer(collection(db, 'materials')),
-          getCountFromServer(collection(db, 'assignments')),
-          getCountFromServer(collection(db, 'submissions')),
-          getCountFromServer(collection(db, 'violations')),
-          getCountFromServer(collection(db, 'counseling')),
+          getDocs(collection(db, 'materials')),
+          getDocs(collection(db, 'assignments')),
+          getDocs(collection(db, 'submissions')),
+          getDocs(collection(db, 'violations')),
+          getDocs(collection(db, 'counseling')),
           getDocs(collection(db, 'announcements')),
         ]);
-
         const usersData = users.docs.map(d => d.data());
         setStats({
           users: usersData.length,
           students: usersData.filter(u => u.role === 'STUDENT').length,
           teachers: usersData.filter(u => u.role === 'TEACHER').length,
-          materials: materials.data().count,
-          assignments: assignments.data().count,
-          submissions: submissions.data().count,
-          violations: violations.data().count,
-          counselings: counselings.data().count,
+          materials: materials.size,
+          assignments: assignments.size,
+          submissions: submissions.size,
+          violations: violations.size,
+          counselings: counselings.size,
         });
-
-        const ann = announcements.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .sort((a: any, b: any) => b.createdAt?.toDate?.() - a.createdAt?.toDate?.())
-          .slice(0, 5);
-        setRecentAnnouncements(ann);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+        setAnnouncements(
+          anns.docs.map(d => ({ id: d.id, ...d.data() }))
+            .sort((a: any, b: any) => b.createdAt?.toDate?.() - a.createdAt?.toDate?.())
+            .slice(0, 5)
+        );
+      } finally { setLoading(false); }
     };
     load();
   }, []);
 
-  if (loading) return <div style={styles.loading}>Memuat dashboard...</div>;
-
-  const statCards = [
-    { label: 'Total User', value: stats.users, color: '#4F46E5', icon: '👤' },
-    { label: 'Siswa', value: stats.students, color: '#059669', icon: '🎒' },
-    { label: 'Guru', value: stats.teachers, color: '#D97706', icon: '👨‍🏫' },
-    { label: 'Materi', value: stats.materials, color: '#7C3AED', icon: '📚' },
-    { label: 'Tugas', value: stats.assignments, color: '#0891B2', icon: '📝' },
-    { label: 'Submissions', value: stats.submissions, color: '#DC2626', icon: '📤' },
-    { label: 'Pelanggaran', value: stats.violations, color: '#EA580C', icon: '⚠️' },
-    { label: 'Konseling', value: stats.counselings, color: '#DB2777', icon: '💬' },
-  ];
+  if (loading) return <div style={s.loading}>Memuat...</div>;
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <h1 style={styles.title}>Dashboard Admin</h1>
-        <p style={styles.subtitle}>Selamat datang di Admin Portal EduTech SMK</p>
+    <div style={s.page}>
+      <div style={s.pageHeader}>
+        <h1 style={s.pageTitle}>Dashboard</h1>
+        <p style={s.pageDesc}>Ringkasan data sekolah hari ini</p>
       </div>
 
-      <div style={styles.statsGrid}>
-        {statCards.map(s => (
-          <div key={s.label} style={{ ...styles.statCard, borderTopColor: s.color }}>
-            <div style={styles.statIcon}>{s.icon}</div>
-            <div style={{ ...styles.statValue, color: s.color }}>{s.value}</div>
-            <div style={styles.statLabel}>{s.label}</div>
-          </div>
-        ))}
+      {/* Stats grid */}
+      <div style={s.statsGrid}>
+        <StatCard label="Total Pengguna"  value={stats.users}      sub={`${stats.students} siswa · ${stats.teachers} guru`} />
+        <StatCard label="Materi"          value={stats.materials} />
+        <StatCard label="Tugas"           value={stats.assignments} />
+        <StatCard label="Submissions"     value={stats.submissions} />
+        <StatCard label="Pelanggaran"     value={stats.violations} />
+        <StatCard label="Konseling"       value={stats.counselings} />
       </div>
 
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>Pengumuman Terbaru</h2>
-        {recentAnnouncements.length === 0 ? (
-          <p style={styles.empty}>Belum ada pengumuman</p>
-        ) : (
-          <div style={styles.announcementList}>
-            {recentAnnouncements.map((a: any) => (
-              <div key={a.id} style={{ ...styles.announcementCard, ...(a.isUrgent ? styles.announcementUrgent : {}) }}>
-                {a.isUrgent && <span style={styles.urgentBadge}>🚨 URGENT</span>}
-                <div style={styles.annTitle}>{a.title}</div>
-                <div style={styles.annBody}>{a.body}</div>
-                <div style={styles.annMeta}>{a.createdAt?.toDate?.().toLocaleDateString('id-ID')}</div>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Announcements */}
+      <div style={s.section}>
+        <h2 style={s.sectionTitle}>Pengumuman Terbaru</h2>
+        {announcements.length === 0
+          ? <p style={s.empty}>Belum ada pengumuman</p>
+          : (
+            <div style={s.annList}>
+              {announcements.map((a: any) => (
+                <div key={a.id} style={{ ...s.annRow, ...(a.isUrgent ? s.annRowUrgent : {}) }}>
+                  <div style={s.annLeft}>
+                    {a.isUrgent && <span style={s.urgentTag}>Darurat</span>}
+                    <p style={s.annTitle}>{a.title}</p>
+                    <p style={s.annBody}>{a.body}</p>
+                  </div>
+                  <span style={s.annDate}>{a.createdAt?.toDate?.().toLocaleDateString('id-ID', { day:'numeric', month:'short' })}</span>
+                </div>
+              ))}
+            </div>
+          )
+        }
       </div>
     </div>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  page: { padding: 24, maxWidth: 1200 },
-  header: { marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: 800, color: '#1E293B', margin: 0 },
-  subtitle: { fontSize: 14, color: '#64748B', marginTop: 4 },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 14, marginBottom: 32 },
+const s: Record<string, React.CSSProperties> = {
+  page:       { padding:28, maxWidth:960 },
+  pageHeader: { marginBottom:24 },
+  pageTitle:  { fontSize:22, fontWeight:700, color:'#1D1D1F' },
+  pageDesc:   { fontSize:13, color:'#86868B', marginTop:3 },
+  statsGrid: {
+    display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(150px, 1fr))',
+    gap:12, marginBottom:28,
+  },
   statCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 16, borderTopWidth: 3, borderTopStyle: 'solid',
-    boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
+    background:'#fff', borderRadius:12, padding:'16px 18px',
+    border:'1px solid #E5E5EA',
   },
-  statIcon: { fontSize: 28, marginBottom: 8 },
-  statValue: { fontSize: 32, fontWeight: 800 },
-  statLabel: { fontSize: 13, color: '#64748B', marginTop: 3 },
-  section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 18, fontWeight: 700, color: '#1E293B', marginBottom: 14 },
-  announcementList: { display: 'flex', flexDirection: 'column', gap: 10 },
-  announcementCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 10, padding: 14,
-    borderLeft: '4px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+  statValue: { fontSize:28, fontWeight:700, color:'#1D1D1F', lineHeight:1 },
+  statLabel: { fontSize:12, color:'#86868B', marginTop:6, fontWeight:500 },
+  statSub:   { fontSize:11, color:'#AEAEB2', marginTop:3 },
+  section:   { },
+  sectionTitle: { fontSize:15, fontWeight:600, color:'#1D1D1F', marginBottom:12 },
+  annList:   { border:'1px solid #E5E5EA', borderRadius:12, overflow:'hidden', background:'#fff' },
+  annRow: {
+    display:'flex', justifyContent:'space-between', alignItems:'flex-start',
+    padding:'14px 16px', borderBottom:'1px solid #F5F5F7',
   },
-  announcementUrgent: { borderLeftColor: '#DC2626' },
-  urgentBadge: { fontSize: 11, color: '#DC2626', fontWeight: 700, display: 'block', marginBottom: 4 },
-  annTitle: { fontSize: 15, fontWeight: 700, color: '#1E293B' },
-  annBody: { fontSize: 13, color: '#64748B', marginTop: 4 },
-  annMeta: { fontSize: 11, color: '#94A3B8', marginTop: 6 },
-  empty: { color: '#94A3B8' },
-  loading: { padding: 24, color: '#64748B' },
+  annRowUrgent: { borderLeft:'3px solid #FF3B30' },
+  annLeft:   { flex:1, marginRight:12 },
+  urgentTag: {
+    display:'inline-block', fontSize:10, fontWeight:700, color:'#FF3B30',
+    background:'#FFF2F2', padding:'2px 6px', borderRadius:4, marginBottom:4,
+    textTransform:'uppercase', letterSpacing:'0.4px',
+  },
+  annTitle: { fontSize:13, fontWeight:600, color:'#1D1D1F' },
+  annBody:  { fontSize:12, color:'#86868B', marginTop:3 },
+  annDate:  { fontSize:11, color:'#AEAEB2', flexShrink:0, paddingTop:1 },
+  empty:    { color:'#86868B', fontSize:13 },
+  loading:  { padding:28, color:'#86868B', fontSize:13 },
 };

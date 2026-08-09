@@ -4,27 +4,26 @@ import { db } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
 
 const ROLE_LABELS: Record<string, string> = {
-  '': 'Semua', STUDENT: 'Siswa', TEACHER: 'Guru Mapel',
+  '': 'Semua Warga Sekolah', STUDENT: 'Siswa', TEACHER: 'Guru Mapel',
   WALI: 'Wali Kelas', BK: 'Guru BK', PIKET: 'Guru Piket',
 };
 
 export default function Announcements() {
   const { adminUser } = useAuth();
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]   = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: '', body: '', targetRole: '', isUrgent: false });
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [form, setForm] = useState({ title:'', body:'', targetRole:'', isUrgent: false });
 
   const load = async () => {
     const snap = await getDocs(collection(db, 'announcements'));
-    setAnnouncements(snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a: any, b: any) => b.createdAt?.toDate?.() - a.createdAt?.toDate?.())
+    setAnnouncements(
+      snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a: any, b: any) => b.createdAt?.toDate?.() - a.createdAt?.toDate?.())
     );
     setLoading(false);
   };
-
   useEffect(() => { load(); }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -39,125 +38,120 @@ export default function Announcements() {
       if (form.targetRole) data.targetRole = form.targetRole;
       await addDoc(collection(db, 'announcements'), data);
       setShowForm(false);
-      setForm({ title: '', body: '', targetRole: '', isUrgent: false });
+      setForm({ title:'', body:'', targetRole:'', isUrgent: false });
       load();
-    } catch (err: any) {
-      alert('Error: ' + err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err: any) { alert(err.message); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Hapus pengumuman "${title}"?`)) return;
+    if (!confirm(`Hapus "${title}"?`)) return;
     await deleteDoc(doc(db, 'announcements', id));
     load();
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
+    <div style={s.page}>
+      <div style={s.pageHeader}>
         <div>
-          <h1 style={styles.title}>Pengumuman Sekolah</h1>
-          <p style={styles.subtitle}>{announcements.length} pengumuman</p>
+          <h1 style={s.pageTitle}>Pengumuman</h1>
+          <p style={s.pageDesc}>{announcements.length} pengumuman</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} style={styles.addBtn}>
-          {showForm ? '✕ Tutup' : '+ Buat Pengumuman'}
+        <button onClick={() => setShowForm(v => !v)} style={s.primaryBtn}>
+          {showForm ? 'Tutup' : 'Buat Pengumuman'}
         </button>
       </div>
 
       {/* Create form */}
       {showForm && (
-        <div style={styles.formCard}>
-          <h3 style={styles.formTitle}>Buat Pengumuman Baru</h3>
+        <div style={s.formCard}>
+          <h3 style={s.formTitle}>Buat Pengumuman Baru</h3>
           <form onSubmit={handleCreate}>
-            <div style={styles.formRow}>
-              <div style={{ flex: 1 }}>
-                <label style={styles.label}>Judul *</label>
-                <input style={styles.input} value={form.title}
-                  onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                  placeholder="Judul pengumuman" />
+            <div style={s.formRow}>
+              <div style={{ flex:1 }}>
+                <label style={s.label}>Judul</label>
+                <input style={s.input} value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="Judul pengumuman" />
               </div>
               <div>
-                <label style={styles.label}>Kirim Ke</label>
-                <select style={styles.input} value={form.targetRole}
-                  onChange={e => setForm(p => ({ ...p, targetRole: e.target.value }))}>
+                <label style={s.label}>Kirim Kepada</label>
+                <select style={s.input} value={form.targetRole} onChange={e => setForm(p => ({ ...p, targetRole: e.target.value }))}>
                   {Object.entries(ROLE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
             </div>
-            <label style={styles.label}>Isi Pengumuman *</label>
-            <textarea
-              style={{ ...styles.input, height: 100, resize: 'vertical' }}
-              value={form.body}
-              onChange={e => setForm(p => ({ ...p, body: e.target.value }))}
-              placeholder="Tulis pengumuman di sini..."
-            />
-            <label style={styles.urgentRow}>
-              <input type="checkbox" checked={form.isUrgent}
-                onChange={e => setForm(p => ({ ...p, isUrgent: e.target.checked }))} />
-              <span style={{ marginLeft: 8, color: '#DC2626', fontWeight: 600 }}>🚨 Tandai sebagai URGENT</span>
+            <div style={{ marginBottom:12 }}>
+              <label style={s.label}>Isi Pengumuman</label>
+              <textarea
+                style={{ ...s.input, height:100, resize:'vertical' as const }}
+                value={form.body}
+                onChange={e => setForm(p => ({ ...p, body: e.target.value }))}
+                placeholder="Tulis isi pengumuman..."
+              />
+            </div>
+            <label style={s.urgentRow}>
+              <input type="checkbox" checked={form.isUrgent} onChange={e => setForm(p => ({ ...p, isUrgent: e.target.checked }))} />
+              <span style={{ marginLeft:7, fontSize:13, color: form.isUrgent ? '#FF3B30' : '#1D1D1F', fontWeight: form.isUrgent ? 600 : 400 }}>
+                Tandai sebagai Darurat
+              </span>
             </label>
-            <div style={styles.formBtns}>
-              <button type="button" onClick={() => setShowForm(false)} style={styles.cancelBtn}>Batal</button>
-              <button type="submit" disabled={saving} style={styles.saveBtn}>
-                {saving ? 'Mengirim...' : 'Kirim Pengumuman'}
-              </button>
+            <div style={s.formBtns}>
+              <button type="button" onClick={() => setShowForm(false)} style={s.cancelBtn}>Batal</button>
+              <button type="submit" disabled={saving} style={s.primaryBtn}>{saving ? 'Mengirim...' : 'Kirim'}</button>
             </div>
           </form>
         </div>
       )}
 
       {/* List */}
-      {loading ? <p>Memuat...</p> : (
-        <div style={styles.list}>
-          {announcements.map(a => (
-            <div key={a.id} style={{ ...styles.card, ...(a.isUrgent ? styles.cardUrgent : {}) }}>
-              <div style={styles.cardTop}>
-                {a.isUrgent && <span style={styles.urgentBadge}>🚨 URGENT</span>}
-                {a.targetRole && (
-                  <span style={styles.roleBadge}>👥 {ROLE_LABELS[a.targetRole] ?? a.targetRole}</span>
-                )}
+      {loading ? <p style={s.loading}>Memuat...</p> : (
+        <div style={s.list}>
+          {announcements.length === 0
+            ? <p style={{ color:'#86868B', fontSize:13 }}>Belum ada pengumuman</p>
+            : announcements.map(a => (
+              <div key={a.id} style={{ ...s.annCard, ...(a.isUrgent ? s.annCardUrgent : {}) }}>
+                <div style={s.annTop}>
+                  <div style={s.annMeta}>
+                    {a.isUrgent && <span style={s.urgentTag}>Darurat</span>}
+                    {a.targetRole && <span style={s.targetTag}>{ROLE_LABELS[a.targetRole] ?? a.targetRole}</span>}
+                    <span style={s.dateTag}>{a.createdAt?.toDate?.().toLocaleString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })}</span>
+                  </div>
+                  <button onClick={() => handleDelete(a.id, a.title)} style={s.deleteBtn}>Hapus</button>
+                </div>
+                <p style={s.annTitle}>{a.title}</p>
+                <p style={s.annBody}>{a.body}</p>
               </div>
-              <div style={styles.cardTitle}>{a.title}</div>
-              <div style={styles.cardBody}>{a.body}</div>
-              <div style={styles.cardFooter}>
-                <span style={styles.cardDate}>{a.createdAt?.toDate?.().toLocaleString('id-ID')}</span>
-                <button onClick={() => handleDelete(a.id, a.title)} style={styles.deleteBtn}>Hapus</button>
-              </div>
-            </div>
-          ))}
-          {announcements.length === 0 && <p style={{ color: '#94A3B8' }}>Belum ada pengumuman</p>}
+            ))
+          }
         </div>
       )}
     </div>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  page: { padding: 24 },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 },
-  title: { fontSize: 22, fontWeight: 800, color: '#1E293B', margin: 0 },
-  subtitle: { fontSize: 13, color: '#64748B', marginTop: 3 },
-  addBtn: { padding: '10px 18px', backgroundColor: '#4F46E5', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 700, fontSize: 14 },
-  formCard: { backgroundColor: '#FFFFFF', borderRadius: 12, padding: 20, marginBottom: 20, boxShadow: '0 1px 6px rgba(0,0,0,0.06)' },
-  formTitle: { fontSize: 16, fontWeight: 700, color: '#1E293B', margin: '0 0 16px' },
-  formRow: { display: 'flex', gap: 12, marginBottom: 12 },
-  label: { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 5 },
-  input: { width: '100%', padding: '9px 12px', border: '1.5px solid #E2E8F0', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' } as any,
-  urgentRow: { display: 'flex', alignItems: 'center', margin: '10px 0', cursor: 'pointer' },
-  formBtns: { display: 'flex', gap: 10, marginTop: 14 },
-  cancelBtn: { flex: 1, padding: '9px 0', border: '1.5px solid #E2E8F0', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600, backgroundColor: '#FFFFFF' },
-  saveBtn: { flex: 2, padding: '9px 0', backgroundColor: '#4F46E5', color: '#FFFFFF', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 700 },
-  list: { display: 'flex', flexDirection: 'column', gap: 10 },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 10, padding: 16, borderLeft: '4px solid #E2E8F0', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
-  cardUrgent: { borderLeftColor: '#DC2626' },
-  cardTop: { display: 'flex', gap: 6, marginBottom: 6 },
-  urgentBadge: { padding: '2px 8px', backgroundColor: '#FEF2F2', color: '#DC2626', borderRadius: 12, fontSize: 11, fontWeight: 700 },
-  roleBadge: { padding: '2px 8px', backgroundColor: '#EEF2FF', color: '#4F46E5', borderRadius: 12, fontSize: 11, fontWeight: 600 },
-  cardTitle: { fontSize: 16, fontWeight: 700, color: '#1E293B', marginBottom: 6 },
-  cardBody: { fontSize: 14, color: '#64748B', lineHeight: 1.6 },
-  cardFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
-  cardDate: { fontSize: 11, color: '#94A3B8' },
-  deleteBtn: { padding: '4px 10px', backgroundColor: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 },
+const s: Record<string, React.CSSProperties> = {
+  page:       { padding:28 },
+  pageHeader: { display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:20 },
+  pageTitle:  { fontSize:22, fontWeight:700, color:'#1D1D1F' },
+  pageDesc:   { fontSize:13, color:'#86868B', marginTop:3 },
+  primaryBtn: { padding:'8px 16px', background:'#1D1D1F', color:'#fff', border:'none', borderRadius:8, cursor:'pointer', fontSize:13, fontWeight:600 },
+  formCard:   { background:'#fff', borderRadius:12, padding:20, marginBottom:20, border:'1px solid #E5E5EA' },
+  formTitle:  { fontSize:15, fontWeight:600, color:'#1D1D1F', marginBottom:14 },
+  formRow:    { display:'flex', gap:12, marginBottom:12 },
+  label:      { display:'block', fontSize:11, fontWeight:600, color:'#6E6E73', marginBottom:5, textTransform:'uppercase', letterSpacing:'0.4px' },
+  input:      { width:'100%', padding:'9px 11px', border:'1px solid #E5E5EA', borderRadius:8, fontSize:13, outline:'none', boxSizing:'border-box' as const, color:'#1D1D1F', fontFamily:'inherit', background:'#FAFAFA' } as any,
+  urgentRow:  { display:'flex', alignItems:'center', cursor:'pointer', marginBottom:14 },
+  formBtns:   { display:'flex', gap:8, justifyContent:'flex-end' },
+  cancelBtn:  { padding:'8px 14px', border:'1px solid #E5E5EA', borderRadius:8, cursor:'pointer', fontSize:13, background:'#fff', fontWeight:500 },
+  list:       { display:'flex', flexDirection:'column', gap:10 },
+  annCard:    { background:'#fff', borderRadius:12, padding:16, border:'1px solid #E5E5EA' },
+  annCardUrgent: { borderLeft:'3px solid #FF3B30' },
+  annTop:     { display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:8 },
+  annMeta:    { display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' as const },
+  urgentTag:  { padding:'2px 7px', background:'#FFF2F2', color:'#FF3B30', borderRadius:4, fontSize:11, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.4px' },
+  targetTag:  { padding:'2px 7px', background:'#F5F5F7', color:'#6E6E73', borderRadius:4, fontSize:11, fontWeight:500 },
+  dateTag:    { fontSize:11, color:'#AEAEB2' },
+  annTitle:   { fontSize:14, fontWeight:600, color:'#1D1D1F', marginBottom:4 },
+  annBody:    { fontSize:13, color:'#86868B', lineHeight:1.6 },
+  deleteBtn:  { padding:'4px 10px', background:'#FFF2F2', color:'#FF3B30', border:'1px solid #FFCDD2', borderRadius:5, cursor:'pointer', fontSize:12, fontWeight:500, flexShrink:0 },
+  loading:    { padding:20, color:'#86868B', fontSize:13 },
 };
