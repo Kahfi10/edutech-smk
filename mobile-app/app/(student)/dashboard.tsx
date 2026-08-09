@@ -255,14 +255,16 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.base,
     paddingHorizontal: Spacing.sm,
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
+    height: 90,              // ← fixed height, tidak stretch
     ...Shadow.xs,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
   },
   menuIconBox: {
-    width: 44, height: 44,
-    borderRadius: 12,
+    width: 40, height: 40,
+    borderRadius: 11,
     backgroundColor: Colors.gray11,
     alignItems: 'center', justifyContent: 'center',
   },

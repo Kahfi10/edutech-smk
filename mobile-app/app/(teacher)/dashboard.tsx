@@ -94,10 +94,10 @@ export default function TeacherDashboard() {
               activeOpacity={0.7}
             >
               <View style={styles.actionIcon}>
-                <Ionicons name={a.icon as any} size={22} color={Colors.black} />
+                <Ionicons name={a.icon as any} size={20} color={Colors.black} />
               </View>
-              <Text style={styles.actionLabel}>{a.label}</Text>
-              <Ionicons name="chevron-forward" size={14} color={Colors.gray7} style={{ marginTop: 'auto' }} />
+              <Text style={styles.actionLabel} numberOfLines={2}>{a.label}</Text>
+              <Ionicons name="chevron-forward" size={14} color={Colors.gray7} />
             </TouchableOpacity>
           ))}
         </View>
@@ -175,23 +175,32 @@ const styles = StyleSheet.create({
     marginTop: Spacing.xl,
     marginBottom: Spacing.sm,
   },
-  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: Spacing.base, gap: 8 },
+  actionsGrid: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    paddingHorizontal: Spacing.base, gap: 8,
+  },
   actionCard: {
     flex: 1, minWidth: '45%',
+    flexDirection: 'row',          // layout horizontal — icon | label | chevron
+    alignItems: 'center',
     backgroundColor: Colors.cardBackground,
     borderRadius: Radius.lg,
     padding: Spacing.base,
-    gap: 6,
+    gap: 10,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
     ...Shadow.xs,
   },
   actionIcon: {
-    width: 40, height: 40, borderRadius: 10,
+    width: 38, height: 38, borderRadius: 10,
     backgroundColor: Colors.gray11,
     alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
-  actionLabel: { ...Typography.subheadline, color: Colors.black, fontWeight: '500' },
+  actionLabel: {
+    ...Typography.subheadline, color: Colors.black,
+    fontWeight: '500', flex: 1,
+  },
   listCard: {
     backgroundColor: Colors.cardBackground,
     marginHorizontal: Spacing.base,
