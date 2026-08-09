@@ -1,24 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, Alert,
+  KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { loginUser } from '../../src/firebase/auth.service';
-import { useAuth } from '../../src/context/AuthContext';
 import { Button } from '../../src/components/ui/Button';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
-
-const ROLE_ROUTES: Record<string, string> = {
-  STUDENT: '/(student)/dashboard',
-  TEACHER: '/(teacher)/dashboard',
-  WALI:    '/(wali)/dashboard',
-  BK:      '/(bk)/dashboard',
-  PIKET:   '/(piket)/dashboard',
-  ADMIN:   '/(auth)/login',
-};
 
 export default function LoginScreen() {
   const [email, setEmail]               = useState('');
@@ -27,16 +16,8 @@ export default function LoginScreen() {
   const [loading, setLoading]           = useState(false);
   const [errorMsg, setErrorMsg]         = useState('');
   const [focused, setFocused]           = useState<'email' | 'password' | null>(null);
-  const insets  = useSafeAreaInsets();
-  const router  = useRouter();
-  const { profile, loading: authLoading } = useAuth();
-
-  // Redirect setelah profile berhasil dimuat (index.tsx tidak mounted lagi saat di /login)
-  useEffect(() => {
-    if (authLoading || !profile) return;
-    const route = ROLE_ROUTES[profile.role] ?? '/(auth)/login';
-    router.replace(route as any);
-  }, [profile, authLoading]);
+  const insets = useSafeAreaInsets();
+  // Redirect ditangani oleh AuthGuard di _layout.tsx
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -47,7 +28,7 @@ export default function LoginScreen() {
     setErrorMsg('');
     try {
       await loginUser(email.trim().toLowerCase(), password);
-      // Redirect handled by useEffect above (watches profile from AuthContext)
+      // Redirect handled by AuthGuard in _layout.tsx
     } catch (err: any) {
       const msg =
         err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password'
