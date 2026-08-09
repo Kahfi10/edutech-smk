@@ -1,145 +1,131 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import {
+  View, Text, FlatList, StyleSheet, TouchableOpacity, Alert,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
-import { getCollection, where } from '../../src/firebase/firestore.service';
-import { Card } from '../../src/components/ui/Card';
-import { Badge } from '../../src/components/ui/Badge';
+import { getCollection, updateDocument, where } from '../../src/firebase/firestore.service';
 import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
-
-interface AlertItem {
-  studentId: string;
-  studentName: string;
-  type: 'alpha' | 'grade_drop' | 'violation';
-  detail: string;
-  severity: 'high' | 'medium';
-}
+import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 export default function WaliAlertsScreen() {
   const { profile } = useAuth();
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const insets = useSafeAreaInsets();
+  const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!profile?.classId) { setLoading(false); return; }
-
     Promise.all([
       getCollection('users', where('role', '==', 'STUDENT'), where('classId', '==', profile.classId)),
       getCollection('attendance'),
       getCollection('submissions'),
       getCollection('violations'),
     ]).then(([students, attendance, submissions, violations]) => {
-      const detectedAlerts: AlertItem[] = [];
-
-      for (const student of (students as any[])) {
-        // 1. Alpha > 3x
+      const detected: any[] = [];
+      for (const s of students as any[]) {
         const alphas = (attendance as any[]).filter(a =>
-          a.records?.some((r: any) => r.studentId === student.uid && r.status === 'alpha')
+          a.records?.some((r: any) => r.studentId === s.uid && r.status === 'alpha')
         ).length;
-        if (alphas > 3) {
-          detectedAlerts.push({
-            studentId: student.uid,
-            studentName: student.name,
-            type: 'alpha',
-            detail: `Alpha ${alphas}x — Ambang batas terlampaui (>3x)`,
-            severity: 'high',
-          });
-        }
-
-        // 2. Nilai drop >20%
-        const mySubs = (submissions as any[])
-          .filter(s => s.studentId === student.uid && s.score != null)
-          .sort((a: any, b: any) => a.submittedAt?.toDate?.() - b.submittedAt?.toDate?.());
+        if (alphas > 3) detected.push({
+          studentId: s.uid, studentName: s.name, type: 'alpha',
+          detail: `Alpha ${alphas}x — Ambang batas terlampaui (>3x)`, severity: 'high',
+        });
+        const mySubs = (submissions as any[]).filter(x => x.studentId === s.uid && x.score != null);
         if (mySubs.length >= 4) {
-          const recent = mySubs.slice(-2).reduce((s: number, x: any) => s + x.score, 0) / 2;
-          const prev = mySubs.slice(-4, -2).reduce((s: number, x: any) => s + x.score, 0) / 2;
-          const drop = prev - recent;
-          if (drop > 20) {
-            detectedAlerts.push({
-              studentId: student.uid,
-              studentName: student.name,
-              type: 'grade_drop',
-              detail: `Nilai turun ${Math.round(drop)} poin (${Math.round(prev)} → ${Math.round(recent)})`,
-              severity: 'high',
-            });
-          }
-        }
-
-        // 3. Poin pelanggaran mendekati max (>=80 dari 100)
-        const totalPoints = (violations as any[])
-          .filter(v => v.studentId === student.uid && v.status === 'verified')
-          .reduce((sum: number, v: any) => sum + (v.points ?? 0), 0);
-        if (totalPoints >= 80) {
-          detectedAlerts.push({
-            studentId: student.uid,
-            studentName: student.name,
-            type: 'violation',
-            detail: `Poin pelanggaran: ${totalPoints}/100 — Mendekati batas maksimum!`,
-            severity: 'high',
+          const recent = mySubs.slice(-2).reduce((n: number, x: any) => n + x.score, 0) / 2;
+          const prev   = mySubs.slice(-4, -2).reduce((n: number, x: any) => n + x.score, 0) / 2;
+          if (prev - recent > 20) detected.push({
+            studentId: s.uid, studentName: s.name, type: 'grade_drop',
+            detail: `Nilai turun ${Math.round(prev - recent)} poin (${Math.round(prev)} → ${Math.round(recent)})`, severity: 'high',
           });
         }
+        const pts = (violations as any[]).filter(v => v.studentId === s.uid && v.status === 'verified')
+          .reduce((n: number, v: any) => n + (v.points ?? 0), 0);
+        if (pts >= 80) detected.push({
+          studentId: s.uid, studentName: s.name, type: 'violation',
+          detail: `Poin pelanggaran: ${pts}/100 — Mendekati batas!`, severity: 'high',
+        });
       }
-
-      setAlerts(detectedAlerts);
+      setAlerts(detected);
     }).finally(() => setLoading(false));
   }, [profile]);
 
-  const ICON: Record<string, string> = { alpha: 'Absensi', grade_drop: 'Nilai Turun', violation: 'Pelanggaran' };
-  const LABEL: Record<string, string> = { alpha: 'Absensi', grade_drop: 'Nilai', violation: 'Pelanggaran' };
+  const TYPE_ICON: Record<string, string> = { alpha: 'calendar-outline', grade_drop: 'trending-down-outline', violation: 'warning-outline' };
+  const TYPE_LABEL: Record<string, string> = { alpha: 'Absensi', grade_drop: 'Nilai', violation: 'Pelanggaran' };
 
   if (loading) return <LoadingSpinner fullScreen />;
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Alert System Cerdas</Text>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Text style={styles.headerTitle}>Alert System</Text>
         <Text style={styles.headerSub}>{alerts.length} siswa perlu perhatian</Text>
       </View>
 
       <FlatList
         data={alerts}
         keyExtractor={(_, i) => i.toString()}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="checkmark-circle-outline" size={44} color="#94A3B8" />
-            <Text style={styles.emptyText}>Semua siswa dalam kondisi baik!</Text>
+          <View style={styles.empty}>
+            <Ionicons name="checkmark-circle-outline" size={48} color={Colors.gray8} />
+            <Text style={styles.emptyTitle}>Semua siswa baik</Text>
+            <Text style={styles.emptySub}>Tidak ada alert saat ini</Text>
           </View>
         }
         renderItem={({ item }) => (
-          <View style={[styles.alertCard, item.severity === 'high' && styles.alertHigh]}>
-            <View style={styles.alertTop}>
-              <Text style={styles.alertIcon}>{ICON[item.type]}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.alertName}>{item.studentName}</Text>
-                <Text style={styles.alertDetail}>{item.detail}</Text>
+          <View style={styles.card}>
+            <View style={styles.iconWrap}>
+              <Ionicons name={TYPE_ICON[item.type] as any} size={20} color={Colors.gray3} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={styles.cardTop}>
+                <Text style={styles.studentName}>{item.studentName}</Text>
+                <View style={styles.typePill}>
+                  <Text style={styles.typeText}>{TYPE_LABEL[item.type]}</Text>
+                </View>
               </View>
-              <Badge label={LABEL[item.type]} bg="#FEF2F2" color="#DC2626" />
+              <Text style={styles.detail}>{item.detail}</Text>
             </View>
           </View>
         )}
+        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { backgroundColor: '#DC2626', padding: 16 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
-  headerSub: { fontSize: 13, color: '#FCA5A5', marginTop: 2 },
-  list: { padding: 16 },
-  alertCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, marginBottom: 8,
-    borderLeftWidth: 4, borderLeftColor: '#E2E8F0',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, elevation: 2,
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    backgroundColor: Colors.black,
+    paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xl,
   },
-  alertHigh: { borderLeftColor: '#DC2626' },
-  alertTop: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  alertIcon: { fontSize: 24 },
-  alertName: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
-  alertDetail: { fontSize: 12, color: '#64748B', marginTop: 3 },
-  emptyContainer: { alignItems: 'center', paddingVertical: 48 },
-  emptyIcon: { fontSize: 48, marginBottom: 8 },
-  emptyText: { fontSize: 15, color: '#64748B' },
+  headerTitle: { ...Typography.title2, color: Colors.white },
+  headerSub: { ...Typography.footnote, color: 'rgba(255,255,255,0.5)', marginTop: 4 },
+  list: { padding: Spacing.base },
+  card: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md,
+    backgroundColor: Colors.cardBackground, borderRadius: Radius.lg,
+    padding: Spacing.base,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator,
+    ...Shadow.sm,
+  },
+  iconWrap: {
+    width: 38, height: 38, borderRadius: 10,
+    backgroundColor: Colors.gray11, alignItems: 'center', justifyContent: 'center',
+  },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  studentName: { ...Typography.headline, color: Colors.black, flex: 1 },
+  typePill: {
+    backgroundColor: Colors.gray11, paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: Radius.full,
+  },
+  typeText: { ...Typography.caption1, color: Colors.gray4, fontWeight: '600' },
+  detail: { ...Typography.footnote, color: Colors.secondaryLabel },
+  empty: { alignItems: 'center', paddingVertical: 64, gap: 8 },
+  emptyTitle: { ...Typography.headline, color: Colors.secondaryLabel },
+  emptySub: { ...Typography.subheadline, color: Colors.tertiaryLabel },
 });

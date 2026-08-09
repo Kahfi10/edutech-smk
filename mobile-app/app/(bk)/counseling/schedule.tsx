@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View, Text, FlatList, StyleSheet, TouchableOpacity, Alert,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../src/context/AuthContext';
 import { getCollection, updateDocument } from '../../../src/firebase/firestore.service';
 import { Badge } from '../../../src/components/ui/Badge';
 import { LoadingSpinner } from '../../../src/components/ui/LoadingSpinner';
+import { Colors, Typography, Spacing, Radius, Shadow } from '../../../src/constants/theme';
 
 export default function BKScheduleScreen() {
   const { profile } = useAuth();
+  const insets = useSafeAreaInsets();
   const [bookings, setBookings] = useState<any[]>([]);
   const [studentMap, setStudentMap] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
+  const load = async () => {
     if (!profile) return;
     const [counselings, users] = await Promise.all([
       getCollection('counseling'),
@@ -20,89 +26,125 @@ export default function BKScheduleScreen() {
     const sMap: Record<string, any> = {};
     (users as any[]).forEach(u => (sMap[u.uid] = u));
     setStudentMap(sMap);
-    const mine = (counselings as any[])
-      .filter(c => c.bkTeacherId === profile.uid)
+    const mine = (counselings as any[]).filter(c => c.bkTeacherId === profile.uid)
       .sort((a, b) => a.scheduledAt?.toDate?.() - b.scheduledAt?.toDate?.());
     setBookings(mine);
     setLoading(false);
   };
 
-  useEffect(() => { loadData(); }, [profile]);
+  useEffect(() => { load(); }, [profile]);
 
   const updateStatus = async (id: string, status: string) => {
     await updateDocument('counseling', id, { status });
-    loadData();
+    load();
   };
 
-  const STATUS_CONFIG: Record<string, { bg: string; c: string }> = {
-    booked: { bg: '#EEF2FF', c: '#4F46E5' },
-    ongoing: { bg: '#FFFBEB', c: '#D97706' },
-    resolved: { bg: '#ECFDF5', c: '#059669' },
+  const STATUS: Record<string, { bg: string; color: string; label: string }> = {
+    booked:   { bg: Colors.gray11, color: Colors.gray3,  label: 'Booking'  },
+    ongoing:  { bg: Colors.gray10, color: Colors.gray2,  label: 'Berjalan' },
+    resolved: { bg: Colors.gray11, color: Colors.gray5,  label: 'Selesai'  },
   };
 
   if (loading) return <LoadingSpinner fullScreen />;
 
   return (
     <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <Text style={styles.title}>Jadwal Konseling</Text>
+        <Text style={styles.sub}>{bookings.length} sesi</Text>
+      </View>
+
       <FlatList
         data={bookings}
         keyExtractor={i => i.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={<Text style={styles.empty}>Belum ada booking konseling</Text>}
+        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            <Ionicons name="calendar-outline" size={48} color={Colors.gray8} />
+            <Text style={styles.emptyTitle}>Belum ada booking</Text>
+          </View>
+        }
         renderItem={({ item }) => {
           const student = studentMap[item.studentId];
-          const sc = STATUS_CONFIG[item.status] ?? { bg: '#F1F5F9', c: '#64748B' };
+          const cfg = STATUS[item.status] ?? STATUS.booked;
           return (
             <View style={styles.card}>
-              <View style={styles.cardTop}>
+              <View style={styles.avatarRow}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{student?.name?.[0]?.toUpperCase() ?? '?'}</Text>
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.studentName}>{student?.name ?? item.studentId}</Text>
-                  <Text style={styles.type}>{item.type}</Text>
-                  <Text style={styles.date}>
-                    {item.scheduledAt?.toDate?.().toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  <Text style={styles.typeText}>{item.type}</Text>
+                  <Text style={styles.dateText}>
+                    {item.scheduledAt?.toDate?.().toLocaleDateString('id-ID', {
+                      weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
+                    })}
                   </Text>
-                  {item.notes ? <Text style={styles.notes}>{item.notes}</Text> : null}
                 </View>
-                <Badge label={item.status} bg={sc.bg} color={sc.c} />
+                <View style={[styles.statusPill, { backgroundColor: cfg.bg }]}>
+                  <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+                </View>
               </View>
-
+              {item.notes ? <Text style={styles.notes}>{item.notes}</Text> : null}
               {item.status === 'booked' && (
                 <View style={styles.actions}>
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#FFFBEB' }]} onPress={() => updateStatus(item.id, 'ongoing')}>
-                    <Text style={[styles.actionText, { color: '#D97706' }]}>Mulai Sesi</Text>
+                  <TouchableOpacity style={styles.actionBtn} onPress={() => updateStatus(item.id, 'ongoing')}>
+                    <Ionicons name="play-circle-outline" size={16} color={Colors.gray3} />
+                    <Text style={styles.actionText}>Mulai Sesi</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#ECFDF5' }]} onPress={() => updateStatus(item.id, 'resolved')}>
-                    <Text style={[styles.actionText, { color: '#059669' }]}>Selesai</Text>
+                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: Colors.gray11 }]} onPress={() => updateStatus(item.id, 'resolved')}>
+                    <Ionicons name="checkmark-circle-outline" size={16} color={Colors.gray5} />
+                    <Text style={[styles.actionText, { color: Colors.gray5 }]}>Selesai</Text>
                   </TouchableOpacity>
                 </View>
               )}
               {item.status === 'ongoing' && (
-                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#ECFDF5', marginTop: 8 }]} onPress={() => updateStatus(item.id, 'resolved')}>
-                  <Text style={[styles.actionText, { color: '#059669' }]}>Tandai Selesai</Text>
+                <TouchableOpacity style={[styles.actionBtn, { marginTop: 8 }]} onPress={() => updateStatus(item.id, 'resolved')}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color={Colors.gray3} />
+                  <Text style={styles.actionText}>Tandai Selesai</Text>
                 </TouchableOpacity>
               )}
             </View>
           );
         }}
+        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  list: { padding: 16 },
-  card: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, marginBottom: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, elevation: 2,
+  container: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    backgroundColor: Colors.gray1, paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xl,
   },
-  cardTop: { flexDirection: 'row', gap: 10 },
-  studentName: { fontSize: 15, fontWeight: '700', color: '#1E293B' },
-  type: { fontSize: 12, color: '#DC2626', fontWeight: '600', textTransform: 'capitalize', marginTop: 2 },
-  date: { fontSize: 12, color: '#64748B', marginTop: 2 },
-  notes: { fontSize: 12, color: '#94A3B8', marginTop: 2, fontStyle: 'italic' },
-  actions: { flexDirection: 'row', gap: 8, marginTop: 10 },
-  actionBtn: { flex: 1, borderRadius: 8, padding: 8, alignItems: 'center' },
-  actionText: { fontSize: 13, fontWeight: '700' },
-  empty: { textAlign: 'center', color: '#94A3B8', padding: 32 },
+  title: { ...Typography.title2, color: Colors.white },
+  sub: { ...Typography.footnote, color: 'rgba(255,255,255,0.5)', marginTop: 4 },
+  list: { padding: Spacing.base },
+  card: {
+    backgroundColor: Colors.cardBackground, borderRadius: Radius.lg, padding: Spacing.base,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator, ...Shadow.sm,
+  },
+  avatarRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  avatar: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: Colors.gray10, alignItems: 'center', justifyContent: 'center',
+  },
+  avatarText: { ...Typography.headline, color: Colors.gray3 },
+  studentName: { ...Typography.headline, color: Colors.black },
+  typeText: { ...Typography.footnote, color: Colors.gray5, textTransform: 'capitalize', marginTop: 2, fontWeight: '600' },
+  dateText: { ...Typography.caption1, color: Colors.tertiaryLabel, marginTop: 2 },
+  statusPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full, alignSelf: 'flex-start' },
+  statusText: { ...Typography.caption1, fontWeight: '700' },
+  notes: { ...Typography.footnote, color: Colors.secondaryLabel, marginTop: 8, fontStyle: 'italic' },
+  actions: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  actionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    backgroundColor: Colors.gray11, borderRadius: Radius.md, padding: 10,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator,
+  },
+  actionText: { ...Typography.subheadline, color: Colors.gray3, fontWeight: '600' },
+  empty: { alignItems: 'center', paddingVertical: 64, gap: 8 },
+  emptyTitle: { ...Typography.headline, color: Colors.secondaryLabel },
 });

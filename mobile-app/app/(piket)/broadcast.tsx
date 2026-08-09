@@ -2,64 +2,58 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { addDocument } from '../../src/firebase/firestore.service';
 import { Button } from '../../src/components/ui/Button';
-import { Colors } from '../../src/constants/theme';
+import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 import { Timestamp } from 'firebase/firestore';
+import { USE_MOCK } from '../../src/constants/mockData';
+
+const ROLE_LABELS: Record<string, string> = {
+  '': 'Semua Warga Sekolah', STUDENT: 'Siswa', TEACHER: 'Guru Mapel',
+  WALI: 'Wali Kelas', BK: 'Guru BK',
+};
+const ROLES = Object.keys(ROLE_LABELS);
 
 export default function BroadcastScreen() {
   const { profile } = useAuth();
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
-  const [targetRole, setTargetRole] = useState('');
+  const insets = useSafeAreaInsets();
+  const [title, setTitle]       = useState('');
+  const [body, setBody]         = useState('');
+  const [targetRole, setTarget] = useState('');
   const [isUrgent, setIsUrgent] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [sentHistory, setSentHistory] = useState<any[]>([]);
+  const [sending, setSending]   = useState(false);
+  const [history, setHistory]   = useState<any[]>([]);
 
-  const ROLES = ['', 'STUDENT', 'TEACHER', 'WALI', 'BK'];
-  const ROLE_LABELS: Record<string, string> = {
-    '': 'Semua',
-    STUDENT: 'Siswa',
-    TEACHER: 'Guru Mapel',
-    WALI: 'Wali Kelas',
-    BK: 'Guru BK',
-  };
-
-  const handleBroadcast = async () => {
-    if (!title.trim()) return Alert.alert('Perhatian', 'Judul pengumuman wajib diisi.');
-    if (!body.trim()) return Alert.alert('Perhatian', 'Isi pengumuman wajib diisi.');
+  const handleBroadcast = () => {
+    if (!title.trim()) return Alert.alert('Judul wajib diisi');
+    if (!body.trim())  return Alert.alert('Isi pengumuman wajib diisi');
 
     Alert.alert(
-      isUrgent ? 'Kirim Darurat?' : 'Konfirmasi Broadcast',
-      `Kirim ke: ${ROLE_LABELS[targetRole] ?? 'Semua'}\n\n"${title}"`,
+      isUrgent ? 'Kirim Darurat?' : 'Konfirmasi',
+      `Kepada: ${ROLE_LABELS[targetRole]}\n\n"${title}"`,
       [
         { text: 'Batal', style: 'cancel' },
         {
-          text: 'Kirim Sekarang',
-          style: isUrgent ? 'destructive' : 'default',
+          text: 'Kirim', style: isUrgent ? 'destructive' : 'default',
           onPress: async () => {
             setSending(true);
             try {
-              const data: any = {
-                title: title.trim(),
-                body: body.trim(),
-                createdBy: profile!.uid,
-                isUrgent,
-                createdAt: Timestamp.now(),
-              };
-              if (targetRole) data.targetRole = targetRole;
-
-              await addDocument('announcements', data);
-              setSentHistory(h => [{ ...data, id: Date.now().toString() }, ...h]);
-              Alert.alert('Berhasil', 'Pengumuman berhasil dikirim ke seluruh sekolah!');
-              setTitle(''); setBody(''); setIsUrgent(false); setTargetRole('');
-            } catch (err: any) {
-              Alert.alert('Error', err.message);
-            } finally {
-              setSending(false);
-            }
+              if (!USE_MOCK) {
+                const data: any = {
+                  title: title.trim(), body: body.trim(),
+                  createdBy: profile!.uid, isUrgent, createdAt: Timestamp.now(),
+                };
+                if (targetRole) data.targetRole = targetRole;
+                await addDocument('announcements', data);
+              }
+              setHistory(h => [{ title, body, isUrgent, targetRole, time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) }, ...h]);
+              Alert.alert('Berhasil', 'Pengumuman berhasil dikirim!');
+              setTitle(''); setBody(''); setIsUrgent(false); setTarget('');
+            } catch (e: any) { Alert.alert('Error', e.message); }
+            finally { setSending(false); }
           },
         },
       ]
@@ -67,40 +61,42 @@ export default function BroadcastScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Broadcast Pengumuman</Text>
-        <Text style={styles.headerSub}>Kirim pengumuman ke seluruh warga sekolah</Text>
-      </View>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 32 }]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Text style={styles.pageTitle}>Siaran Pengumuman</Text>
 
       {/* Urgent toggle */}
       <TouchableOpacity
         style={[styles.urgentToggle, isUrgent && styles.urgentToggleActive]}
-        onPress={() => setIsUrgent(!isUrgent)}
+        onPress={() => setIsUrgent(v => !v)}
+        activeOpacity={0.8}
       >
-        <View style={styles.urgentIconBox}>
-          <Ionicons name={isUrgent ? 'alert-circle' : 'notifications-outline'} size={24} color={isUrgent ? Colors.gray1 : Colors.gray5} />
+        <View style={[styles.urgentIcon, isUrgent && styles.urgentIconActive]}>
+          <Ionicons name={isUrgent ? 'alert-circle' : 'notifications-outline'} size={22} color={isUrgent ? Colors.white : Colors.gray5} />
         </View>
         <View>
           <Text style={[styles.urgentLabel, isUrgent && styles.urgentLabelActive]}>
-            {isUrgent ? 'MODE DARURAT AKTIF' : 'Pengumuman Biasa'}
+            {isUrgent ? 'Mode Darurat Aktif' : 'Pengumuman Biasa'}
           </Text>
           <Text style={styles.urgentSub}>
-            {isUrgent ? 'Notifikasi prioritas tinggi ke semua pengguna' : 'Tap untuk aktifkan mode darurat'}
+            {isUrgent ? 'Prioritas tinggi ke semua pengguna' : 'Tap untuk aktifkan mode darurat'}
           </Text>
         </View>
       </TouchableOpacity>
 
       {/* Target */}
-      <Text style={styles.label}>Kirim Ke</Text>
-      <View style={styles.targetRow}>
+      <Text style={styles.label}>Kirim Kepada</Text>
+      <View style={styles.chipRow}>
         {ROLES.map(r => (
           <TouchableOpacity
             key={r}
-            style={[styles.targetChip, targetRole === r && styles.targetChipActive]}
-            onPress={() => setTargetRole(r)}
+            style={[styles.chip, targetRole === r && styles.chipActive]}
+            onPress={() => setTarget(r)}
           >
-            <Text style={[styles.targetText, targetRole === r && styles.targetTextActive]}>
+            <Text style={[styles.chipText, targetRole === r && styles.chipTextActive]}>
               {ROLE_LABELS[r]}
             </Text>
           </TouchableOpacity>
@@ -108,42 +104,42 @@ export default function BroadcastScreen() {
       </View>
 
       {/* Title */}
-      <Text style={styles.label}>Judul Pengumuman *</Text>
+      <Text style={styles.label}>Judul</Text>
       <TextInput
-        style={styles.input}
-        value={title}
-        onChangeText={setTitle}
-        placeholder="Contoh: Libur Nasional Hari Kemerdekaan"
-        placeholderTextColor="#94A3B8"
+        style={styles.input} value={title} onChangeText={setTitle}
+        placeholder="Contoh: Libur Nasional" placeholderTextColor={Colors.gray7}
       />
 
       {/* Body */}
-      <Text style={styles.label}>Isi Pengumuman *</Text>
+      <Text style={styles.label}>Isi Pengumuman</Text>
       <TextInput
-        style={[styles.input, styles.textArea]}
-        value={body}
-        onChangeText={setBody}
-        multiline
-        numberOfLines={5}
-        placeholder="Tulis isi pengumuman di sini..."
-        placeholderTextColor="#94A3B8"
+        style={[styles.input, { height: 120, textAlignVertical: 'top' }]}
+        value={body} onChangeText={setBody} multiline
+        placeholder="Tulis isi pengumuman..." placeholderTextColor={Colors.gray7}
       />
 
       <Button
-        title={isUrgent ? 'Kirim Darurat Sekarang' : 'Kirim Pengumuman'}
+        title={isUrgent ? 'Kirim Darurat' : 'Kirim Pengumuman'}
         onPress={handleBroadcast}
         loading={sending}
         fullWidth
-        variant={isUrgent ? 'danger' : 'primary'}
-        style={{ marginTop: 8 }}
+        style={{ marginTop: Spacing.xl }}
       />
 
       {/* History */}
-      {sentHistory.length > 0 && (
+      {history.length > 0 && (
         <>
-          <Text style={[styles.label, { marginTop: 20 }]}>Terkirim Hari Ini</Text>
-          {sentHistory.map(h => (
-            <View key={h.id} style={[styles.histCard, h.isUrgent && styles.histUrgent]}>
+          <Text style={[styles.label, { marginTop: Spacing.xxl }]}>Terkirim Hari Ini</Text>
+          {history.map((h, i) => (
+            <View key={i} style={[styles.histCard, h.isUrgent && styles.histCardUrgent]}>
+              <View style={styles.histTop}>
+                {h.isUrgent && (
+                  <View style={styles.urgentBadge}>
+                    <Text style={styles.urgentBadgeText}>DARURAT</Text>
+                  </View>
+                )}
+                <Text style={styles.histTime}>{h.time}</Text>
+              </View>
               <Text style={styles.histTitle}>{h.title}</Text>
               <Text style={styles.histBody} numberOfLines={1}>{h.body}</Text>
             </View>
@@ -155,39 +151,46 @@ export default function BroadcastScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  content: { padding: 16, paddingBottom: 32 },
-  header: { backgroundColor: '#7C3AED', borderRadius: 14, padding: 16, marginBottom: 16 },
-  headerTitle: { fontSize: 18, fontWeight: '800', color: '#FFFFFF' },
-  headerSub: { fontSize: 12, color: '#DDD6FE', marginTop: 2 },
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { paddingHorizontal: Spacing.base },
+  pageTitle: { ...Typography.title2, color: Colors.black, marginBottom: Spacing.xl },
   urgentToggle: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12,
-    borderRadius: 10, backgroundColor: '#F1F5F9', borderWidth: 2, borderColor: '#E2E8F0', marginBottom: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.base,
+    backgroundColor: Colors.cardBackground, borderRadius: Radius.lg, marginBottom: Spacing.base,
+    borderWidth: 1.5, borderColor: Colors.separator, ...Shadow.xs,
   },
-  urgentToggleActive: { backgroundColor: '#FEF2F2', borderColor: '#DC2626' },
-  urgentIconBox: { alignItems: 'center', justifyContent: 'center', width: 36, height: 36 },
-  urgentLabel: { fontSize: 14, fontWeight: '700', color: '#374151' },
-  urgentLabelActive: { color: '#DC2626' },
-  urgentSub: { fontSize: 11, color: '#94A3B8', marginTop: 1 },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8, marginTop: 12 },
-  targetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  targetChip: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-    backgroundColor: '#F1F5F9', borderWidth: 1.5, borderColor: '#E2E8F0',
+  urgentToggleActive: { borderColor: Colors.gray2, backgroundColor: Colors.gray11 },
+  urgentIcon: {
+    width: 42, height: 42, borderRadius: 12,
+    backgroundColor: Colors.gray11, alignItems: 'center', justifyContent: 'center',
   },
-  targetChipActive: { backgroundColor: '#EDE9FE', borderColor: '#7C3AED' },
-  targetText: { fontSize: 12, color: '#64748B', fontWeight: '500' },
-  targetTextActive: { color: '#7C3AED', fontWeight: '700' },
+  urgentIconActive: { backgroundColor: Colors.black },
+  urgentLabel: { ...Typography.subheadline, color: Colors.secondaryLabel, fontWeight: '600' },
+  urgentLabelActive: { color: Colors.black },
+  urgentSub: { ...Typography.caption1, color: Colors.tertiaryLabel, marginTop: 2 },
+  label: { ...Typography.caption1, color: Colors.tertiaryLabel, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8, marginTop: Spacing.base },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: {
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: Radius.full,
+    backgroundColor: Colors.gray11, borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator,
+  },
+  chipActive: { backgroundColor: Colors.black, borderColor: Colors.black },
+  chipText: { ...Typography.footnote, color: Colors.secondaryLabel },
+  chipTextActive: { color: Colors.white, fontWeight: '600' },
   input: {
-    borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1E293B', backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.cardBackground, borderRadius: Radius.md, padding: Spacing.md,
+    ...Typography.body, color: Colors.black,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator, ...Shadow.xs,
   },
-  textArea: { height: 120, textAlignVertical: 'top' },
   histCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 8, padding: 10, marginBottom: 6,
-    borderLeftWidth: 3, borderLeftColor: '#7C3AED',
+    backgroundColor: Colors.cardBackground, borderRadius: Radius.md, padding: Spacing.base,
+    borderLeftWidth: 3, borderLeftColor: Colors.separator, marginBottom: 8,
   },
-  histUrgent: { borderLeftColor: '#DC2626' },
-  histTitle: { fontSize: 13, fontWeight: '700', color: '#1E293B' },
-  histBody: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  histCardUrgent: { borderLeftColor: Colors.gray2 },
+  histTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  urgentBadge: { backgroundColor: Colors.gray2, borderRadius: Radius.xs, paddingHorizontal: 6, paddingVertical: 2 },
+  urgentBadgeText: { ...Typography.caption2, color: Colors.white, fontWeight: '800', letterSpacing: 0.5 },
+  histTime: { ...Typography.caption2, color: Colors.tertiaryLabel },
+  histTitle: { ...Typography.subheadline, color: Colors.black, fontWeight: '500' },
+  histBody: { ...Typography.caption1, color: Colors.tertiaryLabel, marginTop: 2 },
 });
