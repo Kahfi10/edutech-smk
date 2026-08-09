@@ -55,6 +55,9 @@ export default function GradeAssignmentScreen() {
     await updateDocument('submissions', gradingSub.id, {
       score: s, feedback: feedback.trim(), gradedBy: profile!.uid, status: 'graded',
     });
+    // Trigger FCM notif ke siswa
+    const { notifyGraded } = await import('../../../src/services/fcm.service');
+    await notifyGraded(selected?.title ?? 'Tugas', s);
     setModal(false);
     loadSubmissions(selected);
     setSaving(false);

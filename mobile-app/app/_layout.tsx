@@ -17,7 +17,6 @@ const ROLE_ROUTES: Record<string, string> = {
   ADMIN:   '/(admin)',
 };
 
-// AuthGuard selalu mounted — menangani redirect login/logout dari mana saja
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { profile, loading } = useAuth();
   const router   = useRouter();
@@ -25,18 +24,23 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-
     const inAuthGroup = segments[0] === '(auth)';
-
     if (!profile && !inAuthGroup) {
-      // Sudah logout / belum login → redirect ke login
       router.replace('/(auth)/login');
     } else if (profile && inAuthGroup) {
-      // Sudah login tapi masih di auth screen → redirect ke dashboard
       const route = ROLE_ROUTES[profile.role] ?? '/(auth)/login';
       router.replace(route as any);
     }
   }, [profile, loading, segments]);
+
+  // Trigger demo notifications saat pertama kali login
+  useEffect(() => {
+    if (!profile || Platform.OS === 'web') return;
+    import('../src/services/fcm.service').then(({ triggerDemoNotifications }) => {
+      // Delay 3 detik setelah masuk dashboard baru trigger notif
+      setTimeout(() => triggerDemoNotifications(profile.role), 3000);
+    });
+  }, [profile?.uid]); // hanya saat UID berubah (login baru)
 
   return <>{children}</>;
 }
@@ -44,12 +48,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    const isExpoGo = typeof (global as any).__expo_module_core__ === 'undefined';
-    if (isExpoGo) return;
-    import('../src/services/fcm.service').then(({ registerForPushNotifications, setupNotificationListeners }) => {
-      registerForPushNotifications();
-      setupNotificationListeners((n) => console.log('Notif:', n.request.content.title));
-    });
+    // Register izin notifikasi dan setup listener
+    import('../src/services/fcm.service').then(
+      ({ registerForPushNotifications, setupNotificationListeners }) => {
+        registerForPushNotifications();
+        setupNotificationListeners();
+      }
+    );
   }, []);
 
   return (
@@ -67,7 +72,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(wali)" />
                 <Stack.Screen name="(bk)" />
                 <Stack.Screen name="(piket)" />
-              <Stack.Screen name="(admin)" />
+                <Stack.Screen name="(admin)" />
               </Stack>
               <MockRoleSwitcher />
             </View>

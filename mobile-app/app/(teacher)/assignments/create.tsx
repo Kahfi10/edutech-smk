@@ -61,7 +61,10 @@ export default function CreateAssignmentScreen() {
         deadline: Timestamp.fromDate(dateObj),
         maxScore: score, createdBy: profile!.uid,
       });
-      Alert.alert('Berhasil', 'Tugas berhasil dibuat!');
+      // Trigger FCM local notification sebagai demo
+      const { notifyNewAssignment } = await import('../../../src/services/fcm.service');
+      await notifyNewAssignment(title.trim(), subjects.find(s => s.id === subjectId)?.name ?? 'Mata Pelajaran');
+      Alert.alert('Berhasil', 'Tugas berhasil dibuat! Siswa akan mendapat notifikasi.');
       setTitle(''); setDescription(''); setMaxScore('100');
       getCollection('assignments', where('createdBy', '==', profile!.uid))
         .then(d => setRecent((d as any[]).slice(0, 5)));

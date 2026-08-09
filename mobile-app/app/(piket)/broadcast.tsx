@@ -50,6 +50,9 @@ export default function BroadcastScreen() {
                 await addDocument('announcements', data);
               }
               setHistory(h => [{ title, body, isUrgent, targetRole, time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) }, ...h]);
+              // Trigger FCM local notification
+              const { notifyBroadcast } = await import('../../src/services/fcm.service');
+              await notifyBroadcast(title.trim(), body.trim(), isUrgent);
               Alert.alert('Berhasil', 'Pengumuman berhasil dikirim!');
               setTitle(''); setBody(''); setIsUrgent(false); setTarget('');
             } catch (e: any) { Alert.alert('Error', e.message); }
