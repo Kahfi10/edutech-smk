@@ -1,19 +1,12 @@
 /**
  * MOCK DATA — untuk preview UI tanpa Firebase
- *
- * Auto-detect platform:
- * - Web (localhost:8081): Firebase mode — Auth + Firestore nyata
- * - Mobile (Expo Go iOS/Android): Mock mode — UI demo tanpa Firebase
- *
- * Firebase JS SDK tidak kompatibel dengan Expo Go karena bundle RN/web conflict.
- * Untuk mobile production, gunakan EAS Development Build.
+ * USE_MOCK = false → Firebase aktif di semua platform
+ * USE_MOCK = true  → UI demo tanpa Firebase (untuk development)
  */
 
-import { Platform } from 'react-native';
 import { Timestamp } from 'firebase/firestore';
 
-// Web = Firebase aktif | Mobile Expo Go = Mock (tidak ada error auth)
-export const USE_MOCK = Platform.OS !== 'web';
+export const USE_MOCK = false;
 
 const now = Timestamp.now();
 
