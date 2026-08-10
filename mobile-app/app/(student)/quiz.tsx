@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Animated,
 } from 'react-native';
@@ -146,13 +146,13 @@ export default function QuizScreen() {
               <View key={i} style={[styles.reviewCard, isCorrect ? styles.reviewCorrect : styles.reviewWrong]}>
                 <View style={styles.reviewHeader}>
                   <Text style={styles.reviewNum}>Soal {i + 1}</Text>
-                  <View style={[styles.reviewBadge, { backgroundColor: isCorrect ? '#ECFDF5' : '#FFF2F2' }]}>
+                  <View style={[styles.reviewBadge, { backgroundColor: isCorrect ? Colors.gray11 : Colors.gray11 }]}>
                     <Ionicons
                       name={isCorrect ? 'checkmark-circle' : 'close-circle'}
                       size={14}
-                      color={isCorrect ? '#16A34A' : '#DC2626'}
+                      color={isCorrect ? Colors.gray3 : Colors.gray1}
                     />
-                    <Text style={[styles.reviewBadgeText, { color: isCorrect ? '#16A34A' : '#DC2626' }]}>
+                    <Text style={[styles.reviewBadgeText, { color: isCorrect ? Colors.gray3 : Colors.gray1 }]}>
                       {isCorrect ? 'Benar' : 'Salah'}
                     </Text>
                   </View>
@@ -396,16 +396,16 @@ const styles = StyleSheet.create({
     marginBottom: 10, borderLeftWidth: 3, borderLeftColor: Colors.separator,
     borderWidth: StyleSheet.hairlineWidth, borderColor: Colors.separator,
   },
-  reviewCorrect: { borderLeftColor: '#16A34A' },
-  reviewWrong:   { borderLeftColor: '#DC2626' },
+  reviewCorrect: { borderLeftColor: Colors.gray3 },
+  reviewWrong:   { borderLeftColor: Colors.gray1 },
   reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   reviewNum:    { ...Typography.caption1, color: Colors.tertiaryLabel, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.4 },
   reviewBadge:  { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
   reviewBadgeText: { ...Typography.caption1, fontWeight: '700' },
   reviewQuestion:  { ...Typography.subheadline, color: Colors.black, fontWeight: '500', marginBottom: 10, lineHeight: 22 },
   reviewOption:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 8, borderRadius: Radius.sm, marginBottom: 6, backgroundColor: Colors.gray11 },
-  reviewOptionCorrect: { backgroundColor: '#ECFDF5' },
-  reviewOptionWrong:   { backgroundColor: '#FFF2F2' },
+  reviewOptionCorrect: { backgroundColor: Colors.gray11 },
+  reviewOptionWrong:   { backgroundColor: Colors.gray11 },
   reviewOptionText:    { ...Typography.footnote, color: Colors.secondaryLabel, flex: 1 },
   empty:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   emptyTitle: { ...Typography.headline, color: Colors.secondaryLabel },
