@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { logoutUser } from '../../src/firebase/auth.service';
+import { AppLogo } from '../../src/components/shared/AppLogo';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 export default function AdminScreen() {
@@ -21,9 +22,7 @@ export default function AdminScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <View style={styles.logoBox}>
-          <Text style={styles.logoText}>A</Text>
-        </View>
+        <AppLogo size={60} />
         <Text style={styles.appName}>EduTech SMK</Text>
         <Text style={styles.role}>Admin Portal</Text>
       </View>

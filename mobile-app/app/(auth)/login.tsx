@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { loginUser } from '../../src/firebase/auth.service';
 import { Button } from '../../src/components/ui/Button';
+import { AppLogo } from '../../src/components/shared/AppLogo';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 export default function LoginScreen() {
@@ -58,9 +59,7 @@ export default function LoginScreen() {
       >
         {/* Logo */}
         <View style={styles.logoArea}>
-          <View style={styles.logoBox}>
-            <Text style={styles.logoText}>E</Text>
-          </View>
+          <AppLogo size={72} />
           <Text style={styles.appName}>EduTech SMK</Text>
           <Text style={styles.appSub}>Sistem Manajemen Pembelajaran</Text>
         </View>
