@@ -1,30 +1,29 @@
 ﻿import React, {
   createContext, useContext, useEffect, useState, ReactNode,
 } from 'react';
-import { User } from 'firebase/auth';
 import { UserProfile } from '../types';
 import { onAuthChange, getUserProfile } from '../firebase/auth.service';
 import { USE_MOCK, MOCK_USERS } from '../constants/mockData';
 
 interface AuthContextType {
-  user: User | null;
+  user: any | null;
   profile: UserProfile | null;
   loading: boolean;
+  error: string | null;
   refreshProfile: () => Promise<void>;
-  // mock only
   setMockRole?: (role: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  user: null, profile: null, loading: true, refreshProfile: async () => {},
+  user: null, profile: null, loading: true, error: null, refreshProfile: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser]       = useState<User | null>(null);
+  const [user, setUser]       = useState<any | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
 
-  // ── MOCK MODE ──────────────────────────────────────────────────
   const setMockRole = (role: string) => {
     const p = MOCK_USERS[role];
     if (p) setProfile(p as UserProfile);
@@ -32,34 +31,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (USE_MOCK) {
-      // Default mock: Siswa — ganti sesuai role yang ingin dilihat
       setProfile(MOCK_USERS['STUDENT'] as UserProfile);
       setLoading(false);
       return;
     }
 
-    // ── FIREBASE MODE ──────────────────────────────────────────
     const unsub = onAuthChange(async (u) => {
       setUser(u);
+      setError(null);
+
       if (u) {
-        const p = await getUserProfile(u.uid);
-        setProfile(p);
+        try {
+          const p = await getUserProfile(u.uid);
+          if (p) {
+            setProfile(p);
+          } else {
+            // User ada di Auth tapi tidak ada di Firestore
+            // Kemungkinan: seed data belum dijalankan atau uid tidak cocok
+            console.warn('[AuthContext] Profile null untuk uid:', u.uid);
+            setError('Profil pengguna tidak ditemukan. Hubungi admin.');
+            setProfile(null);
+          }
+        } catch (err: any) {
+          console.error('[AuthContext] Gagal load profile:', err.code, err.message);
+          // Firestore permission denied atau network error
+          if (err.code === 'permission-denied') {
+            setError('Akses ditolak. Coba login ulang.');
+          } else if (err.code === 'unavailable') {
+            setError('Tidak ada koneksi internet.');
+          } else {
+            setError('Gagal memuat data. Coba lagi.');
+          }
+          setProfile(null);
+        }
       } else {
         setProfile(null);
       }
       setLoading(false);
     });
+
     return unsub;
   }, []);
 
   const refreshProfile = async () => {
     if (USE_MOCK || !user) return;
-    const p = await getUserProfile(user.uid);
-    setProfile(p);
+    try {
+      const p = await getUserProfile(user.uid);
+      if (p) setProfile(p);
+    } catch (err) {
+      console.error('[AuthContext] refreshProfile failed:', err);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, refreshProfile, setMockRole }}>
+    <AuthContext.Provider value={{ user, profile, loading, error, refreshProfile, setMockRole }}>
       {children}
     </AuthContext.Provider>
   );

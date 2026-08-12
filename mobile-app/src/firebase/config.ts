@@ -1,40 +1,53 @@
 ﻿import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
-  apiKey:            process.env.EXPO_PUBLIC_FIREBASE_API_KEY            ?? '',
-  authDomain:        process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN        ?? '',
-  projectId:         process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID         ?? '',
-  storageBucket:     process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET     ?? '',
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
-  appId:             process.env.EXPO_PUBLIC_FIREBASE_APP_ID             ?? '',
+  apiKey:            process.env.EXPO_PUBLIC_FIREBASE_API_KEY            ?? 'AIzaSyA94eenf8Mu2dYXbDtsAX57206j6MK3ejA',
+  authDomain:        process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN        ?? 'edutech-smk.firebaseapp.com',
+  projectId:         process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID         ?? 'edutech-smk',
+  storageBucket:     process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET     ?? 'edutech-smk.firebasestorage.app',
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '1007739019694',
+  appId:             process.env.EXPO_PUBLIC_FIREBASE_APP_ID             ?? '1:1007739019694:web:a48af541050df726a6683f',
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Dengan unstable_conditionNames: ['react-native', ...] di metro.config.js,
-// @firebase/auth di-resolve ke dist/rn/index.js yang punya getReactNativePersistence
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const firebaseAuth = require('@firebase/auth');
-const { initializeAuth, getAuth, getReactNativePersistence } = firebaseAuth;
+let auth: any;
 
-let auth: ReturnType<typeof getAuth>;
-try {
-  if (typeof getReactNativePersistence === 'function') {
-    // RN bundle tersedia → pakai AsyncStorage persistence
-    auth = initializeAuth(app, {
-      persistence: getReactNativePersistence(AsyncStorage),
-    });
-  } else {
-    // Web bundle fallback → inMemoryPersistence
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { inMemoryPersistence } = require('@firebase/auth');
-    auth = initializeAuth(app, { persistence: inMemoryPersistence });
-  }
-} catch {
-  // Hot reload: auth sudah diregistrasi sebelumnya
+if (Platform.OS === 'web') {
+  // WEB: pakai getAuth biasa — tidak butuh AsyncStorage
+  const { getAuth } = require('firebase/auth');
   auth = getAuth(app);
+} else {
+  // MOBILE (React Native): butuh initializeAuth + AsyncStorage persistence
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const rnAuth = require('@firebase/auth');
+    const { initializeAuth, getReactNativePersistence, getAuth } = rnAuth;
+
+    if (typeof getReactNativePersistence === 'function') {
+      try {
+        auth = initializeAuth(app, {
+          persistence: getReactNativePersistence(AsyncStorage),
+        });
+      } catch {
+        // Hot reload — auth sudah diinit
+        auth = getAuth(app);
+      }
+    } else {
+      // Fallback
+      const { initializeAuth, getAuth, inMemoryPersistence } = require('firebase/auth');
+      try {
+        auth = initializeAuth(app, { persistence: inMemoryPersistence });
+      } catch {
+        auth = getAuth(app);
+      }
+    }
+  } catch {
+    const { getAuth } = require('firebase/auth');
+    auth = getAuth(app);
+  }
 }
 
 export { auth };

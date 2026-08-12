@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, StyleSheet, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { loginUser } from '../../src/firebase/auth.service';
+import { useAuth } from '../../src/context/AuthContext';
 import { Button } from '../../src/components/ui/Button';
 import { AppLogo } from '../../src/components/shared/AppLogo';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
@@ -16,9 +17,19 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading]           = useState(false);
   const [errorMsg, setErrorMsg]         = useState('');
+  const [loginSuccess, setLoginSuccess] = useState(false);
   const [focused, setFocused]           = useState<'email' | 'password' | null>(null);
   const insets = useSafeAreaInsets();
-  // Redirect ditangani oleh AuthGuard di _layout.tsx
+
+  // Watch AuthContext error (e.g. profile not found after login)
+  const { error: authError, loading: authLoading } = useAuth();
+  useEffect(() => {
+    if (authError && loginSuccess) {
+      setErrorMsg(authError);
+      setLoginSuccess(false);
+      setLoading(false);
+    }
+  }, [authError, loginSuccess]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
@@ -27,10 +38,13 @@ export default function LoginScreen() {
     }
     setLoading(true);
     setErrorMsg('');
+    setLoginSuccess(false);
     try {
       await loginUser(email.trim().toLowerCase(), password);
-      // Redirect handled by AuthGuard in _layout.tsx
+      // Login Firebase berhasil — tunggu AuthGuard redirect
+      setLoginSuccess(true);
     } catch (err: any) {
+      setLoginSuccess(false);
       const msg =
         err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password'
           ? 'Email atau password salah.'
@@ -40,12 +54,25 @@ export default function LoginScreen() {
           ? 'Terlalu banyak percobaan. Coba beberapa saat lagi.'
           : err.code === 'auth/network-request-failed'
           ? 'Tidak ada koneksi internet.'
+          : err.code === 'auth/invalid-email'
+          ? 'Format email tidak valid.'
           : `Gagal masuk: ${err.message}`;
       setErrorMsg(msg);
-    } finally {
       setLoading(false);
     }
+    // Jangan setLoading(false) jika berhasil — biarkan loading sampai redirect
   };
+
+  // Jika login sukses dan AuthContext sedang load profile
+  if (loginSuccess && (loading || authLoading)) {
+    return (
+      <View style={styles.loadingScreen}>
+        <AppLogo size={64} />
+        <ActivityIndicator size="large" color={Colors.black} style={{ marginTop: 24 }} />
+        <Text style={styles.loadingText}>Memuat profil...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -94,6 +121,7 @@ export default function LoginScreen() {
               onFocus={() => setFocused('email')}
               onBlur={() => setFocused(null)}
               returnKeyType="next"
+              editable={!loading}
             />
           </View>
 
@@ -118,8 +146,9 @@ export default function LoginScreen() {
               onBlur={() => setFocused(null)}
               returnKeyType="done"
               onSubmitEditing={handleLogin}
+              editable={!loading}
             />
-            <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
+            <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn} disabled={loading}>
               <Ionicons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={18}
@@ -130,7 +159,7 @@ export default function LoginScreen() {
 
           {/* Login Button */}
           <Button
-            title={loading ? 'Memverifikasi...' : 'Masuk'}
+            title="Masuk"
             onPress={handleLogin}
             loading={loading}
             fullWidth
@@ -146,7 +175,7 @@ export default function LoginScreen() {
           </Text>
           <View style={styles.divider} />
           <Text style={styles.adminNote}>
-            Admin Sekolah — akses via Web Portal
+            Admin Sekolah — akses via edutech-smk-admin.web.app
           </Text>
         </View>
       </ScrollView>
@@ -156,80 +185,44 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  loadingScreen: {
+    flex: 1, backgroundColor: Colors.background,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  loadingText: { ...Typography.subheadline, color: Colors.tertiaryLabel, marginTop: 12 },
   scroll: {
-    flexGrow: 1,
-    paddingHorizontal: Spacing.xl,
-    justifyContent: 'center',
+    flexGrow: 1, paddingHorizontal: Spacing.xl, justifyContent: 'center',
   },
   logoArea: { alignItems: 'center', marginBottom: 48 },
-  logoBox: {
-    width: 72, height: 72,
-    borderRadius: Radius.xl,
-    backgroundColor: Colors.black,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 16,
-    ...Shadow.md,
-  },
-  logoText: { fontSize: 32, fontWeight: '800', color: Colors.white },
-  appName:  { ...Typography.title2, color: Colors.black, marginBottom: 4 },
+  appName:  { ...Typography.title2, color: Colors.black, marginBottom: 4, marginTop: 16 },
   appSub:   { ...Typography.subheadline, color: Colors.tertiaryLabel },
-
   form: { marginBottom: 32 },
-
   errorBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Colors.gray11,
-    borderRadius: Radius.sm,
-    padding: Spacing.md,
-    marginBottom: Spacing.md,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.gray4,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#FFF2F2', borderRadius: Radius.sm, padding: Spacing.md,
+    marginBottom: Spacing.md, borderLeftWidth: 3, borderLeftColor: '#FF3B30',
   },
-  errorText: { ...Typography.footnote, color: Colors.gray2, flex: 1 },
-
+  errorText: { ...Typography.footnote, color: '#FF3B30', flex: 1 },
   inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.cardBackground,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.separator,
-    paddingHorizontal: Spacing.md,
-    minHeight: 52,
-    ...Shadow.xs,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.cardBackground, borderRadius: Radius.md,
+    borderWidth: 1, borderColor: Colors.separator,
+    paddingHorizontal: Spacing.md, minHeight: 52, ...Shadow.xs,
   },
-  inputFocused: {
-    borderColor: Colors.black,
-    borderWidth: 1.5,
-  },
+  inputFocused: { borderColor: Colors.black, borderWidth: 1.5 },
   inputIcon:  { marginRight: 10 },
   input: {
-    flex: 1,
-    ...Typography.body,
-    color: Colors.black,
-    paddingVertical: 0,
+    flex: 1, ...Typography.body, color: Colors.black, paddingVertical: 0,
   },
   eyeBtn:   { padding: 4 },
   inputGap: { height: 10 },
   loginBtn: { marginTop: 20 },
-
   footer: { alignItems: 'center', gap: 10 },
   footerText: {
-    ...Typography.caption1,
-    color: Colors.tertiaryLabel,
-    textAlign: 'center',
-    lineHeight: 18,
+    ...Typography.caption1, color: Colors.tertiaryLabel, textAlign: 'center', lineHeight: 18,
   },
   divider: {
-    width: 40,
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: Colors.separator,
+    width: 40, height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator,
   },
-  adminNote: {
-    ...Typography.caption2,
-    color: Colors.quaternaryLabel,
-    textAlign: 'center',
-  },
+  adminNote: { ...Typography.caption2, color: Colors.quaternaryLabel, textAlign: 'center' },
 });
