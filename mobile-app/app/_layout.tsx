@@ -25,9 +25,15 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
     const inAuthGroup = segments[0] === '(auth)';
+
     if (!profile && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (profile && inAuthGroup) {
+      // Admin di web → langsung redirect ke admin panel
+      if (profile.role === 'ADMIN' && Platform.OS === 'web') {
+        (window as any).location.href = 'https://edutech-smk-admin.web.app';
+        return;
+      }
       const route = ROLE_ROUTES[profile.role] ?? '/(auth)/login';
       router.replace(route as any);
     }
