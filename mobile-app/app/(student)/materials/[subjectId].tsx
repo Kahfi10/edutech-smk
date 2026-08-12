@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity, Alert, Linking,
 } from 'react-native';
@@ -49,7 +49,15 @@ export default function MaterialsScreen() {
     if (USE_MOCK || !selected) return;
     setLoading(true);
     getCollection('materials', where('subjectId', '==', selected))
-      .then(setMaterials).finally(() => setLoading(false));
+      .then(data => {
+        const seen = new Set<string>();
+        const unique = (data as any[]).filter(m => {
+          if (seen.has(m.title)) return false;
+          seen.add(m.title);
+          return true;
+        });
+        setMaterials(unique);
+      }).finally(() => setLoading(false));
   }, [selected]);
 
   if (loading) return <LoadingSpinner fullScreen />;

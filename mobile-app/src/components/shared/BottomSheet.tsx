@@ -1,4 +1,4 @@
-/**
+﻿/**
  * BottomSheet — Reusable modal dengan keyboard handling yang benar
  * Menggantikan Modal biasa di semua form/input screen
  */
@@ -27,13 +27,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.spring(slideY, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }),
-        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.spring(slideY, { toValue: 0, useNativeDriver: Platform.OS !== "web", damping: 20, stiffness: 200 }),
+        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: Platform.OS !== "web" }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(slideY,  { toValue: 300, duration: 200, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0,   duration: 200, useNativeDriver: true }),
+        Animated.timing(slideY,  { toValue: 300, duration: 200, useNativeDriver: Platform.OS !== "web" }),
+        Animated.timing(opacity, { toValue: 0,   duration: 200, useNativeDriver: Platform.OS !== "web" }),
       ]).start();
     }
   }, [visible]);

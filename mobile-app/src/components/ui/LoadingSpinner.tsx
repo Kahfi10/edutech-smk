@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, ActivityIndicator, Text, StyleSheet, Animated } from 'react-native';
+﻿import React, { useEffect, useRef } from 'react';
+import { View, ActivityIndicator, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { Colors, Typography } from '../../constants/theme';
 
 export const LoadingSpinner: React.FC<{
@@ -9,7 +9,7 @@ export const LoadingSpinner: React.FC<{
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: Platform.OS !== "web" }).start();
   }, []);
 
   return (

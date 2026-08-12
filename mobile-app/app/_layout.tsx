@@ -1,5 +1,5 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Platform } from 'react-native';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { StatusBar } from 'expo-status-bar';
@@ -7,6 +7,8 @@ import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PaperTheme } from '../src/constants/paperTheme';
 import { MockRoleSwitcher } from '../src/components/shared/MockRoleSwitcher';
+import * as Font from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 
 const ROLE_ROUTES: Record<string, string> = {
   STUDENT: '/(student)/dashboard',
@@ -52,6 +54,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    // Preload Ionicons font untuk web
+    Font.loadAsync(Ionicons.font).then(() => setFontsLoaded(true)).catch(() => setFontsLoaded(true));
+  }, []);
+
   useEffect(() => {
     if (Platform.OS === 'web') return;
     // Register izin notifikasi dan setup listener

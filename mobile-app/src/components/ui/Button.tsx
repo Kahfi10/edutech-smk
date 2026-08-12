@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
+﻿import React, { useRef } from 'react';
 import {
   TouchableOpacity, Text, ActivityIndicator,
-  StyleSheet, ViewStyle, TextStyle, Animated,
+  StyleSheet, ViewStyle, TextStyle, Animated, Platform,
 } from 'react-native';
 import { Colors, Radius, Typography } from '../../constants/theme';
 
@@ -26,8 +26,8 @@ export const Button: React.FC<ButtonProps> = ({
     'primary' | 'secondary' | 'ghost' | 'destructive';
   const isDisabled = disabled || loading;
 
-  const pressIn  = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: true, damping: 15, stiffness: 400 }).start();
-  const pressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: true, damping: 15, stiffness: 400 }).start();
+  const pressIn  = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: Platform.OS !== "web", damping: 15, stiffness: 400 }).start();
+  const pressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: Platform.OS !== "web", damping: 15, stiffness: 400 }).start();
 
   return (
     <Animated.View style={[fullWidth && styles.fullWidth, { transform: [{ scale }] }, style]}>

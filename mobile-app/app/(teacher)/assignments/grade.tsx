@@ -168,7 +168,7 @@ export default function GradeAssignmentScreen() {
         <TextInput
           style={styles.scoreInput} value={score} onChangeText={setScore}
           keyboardType="numeric" placeholder="0" placeholderTextColor={Colors.gray7}
-          returnKeyType="next" autoFocus
+          returnKeyType="done" autoFocus
         />
         <Text style={styles.label}>Feedback (opsional)</Text>
         <TextInput

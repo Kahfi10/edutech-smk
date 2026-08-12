@@ -32,7 +32,15 @@ export default function AssignmentsScreen() {
   useEffect(() => {
     if (!profile?.classId) return;
     const unsub = subscribeCollection('assignments', (data) => {
-      const sorted = (data as any[]).sort((a, b) => a.deadline?.toDate?.() - b.deadline?.toDate?.());
+      // Deduplicate by title+classId (seed ran multiple times)
+      const seen = new Set<string>();
+      const unique = (data as any[]).filter(a => {
+        const key = `${a.title}_${a.classId}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      const sorted = unique.sort((a, b) => a.deadline?.toDate?.() - b.deadline?.toDate?.());
       setAssignments(sorted);
       setLoading(false);
     }, where('classId', '==', profile.classId));

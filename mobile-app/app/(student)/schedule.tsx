@@ -59,7 +59,8 @@ export default function ScheduleScreen() {
     Colors.gray2, Colors.gray3, Colors.gray4, Colors.gray5,
   ];
 
-  const getSubjectColor = (subject: string) => {
+  const getSubjectColor = (subject: string | undefined) => {
+    if (!subject) return Colors.gray3;
     let hash = 0;
     for (let i = 0; i < subject.length; i++) hash = subject.charCodeAt(i) + ((hash << 5) - hash);
     return subjectColors[Math.abs(hash) % subjectColors.length];
@@ -111,23 +112,27 @@ export default function ScheduleScreen() {
         ) : (
           <>
             <Text style={styles.dayTitle}>{DAYS[selectedDay]}, {todaySchedule.length} mata pelajaran</Text>
-            {todaySchedule.map((item, i) => (
+            {todaySchedule.map((item, i) => {
+              // Normalize: Firestore pakai subjectName/teacherName, mock pakai subject/teacher
+              const subjectName = item.subjectName ?? item.subject ?? '-';
+              const teacherName = item.teacherName ?? item.teacher ?? '-';
+              return (
               <View key={i} style={styles.scheduleCard}>
-                <View style={[styles.subjectBar, { backgroundColor: getSubjectColor(item.subject) }]} />
+                <View style={[styles.subjectBar, { backgroundColor: getSubjectColor(subjectName) }]} />
                 <View style={styles.timeCol}>
                   <Text style={styles.timeStart}>{item.start}</Text>
                   <View style={styles.timeLine} />
                   <Text style={styles.timeEnd}>{item.end}</Text>
                 </View>
                 <View style={styles.scheduleInfo}>
-                  <Text style={styles.subjectName}>{item.subject}</Text>
+                  <Text style={styles.subjectName}>{subjectName}</Text>
                   <View style={styles.scheduleMetaRow}>
                     <Ionicons name="person-outline" size={12} color={Colors.gray6} />
-                    <Text style={styles.scheduleMeta}>{item.teacher}</Text>
+                    <Text style={styles.scheduleMeta}>{teacherName}</Text>
                   </View>
                   <View style={styles.scheduleMetaRow}>
                     <Ionicons name="location-outline" size={12} color={Colors.gray6} />
-                    <Text style={styles.scheduleMeta}>{item.room}</Text>
+                    <Text style={styles.scheduleMeta}>{item.room ?? '-'}</Text>
                   </View>
                 </View>
                 <View style={styles.periodBadge}>
@@ -135,7 +140,8 @@ export default function ScheduleScreen() {
                   <Text style={styles.periodLabel}>Jam</Text>
                 </View>
               </View>
-            ))}
+              );
+            })}
           </>
         )}
       </ScrollView>
