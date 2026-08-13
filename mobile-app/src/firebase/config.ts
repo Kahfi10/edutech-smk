@@ -16,9 +16,17 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 let auth: any;
 
 if (Platform.OS === 'web') {
-  // WEB: pakai getAuth biasa — tidak butuh AsyncStorage
-  const { getAuth } = require('firebase/auth');
-  auth = getAuth(app);
+  // WEB: initializeAuth dengan browserLocalPersistence
+  // Ini menyimpan sesi di localStorage (bukan memori) — tidak ada warning AsyncStorage
+  const {
+    initializeAuth, getAuth, browserLocalPersistence,
+  } = require('firebase/auth');
+  try {
+    auth = initializeAuth(app, { persistence: browserLocalPersistence });
+  } catch {
+    // Already initialized (hot reload)
+    auth = getAuth(app);
+  }
 } else {
   // MOBILE (React Native): butuh initializeAuth + AsyncStorage persistence
   try {
