@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,16 +12,23 @@ import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 const MENU_ITEMS = [
-  { label: 'Materi',      icon: 'book-outline',          route: '/(student)/materials/all' },
-  { label: 'Tugas',       icon: 'document-text-outline', route: '/(student)/assignments'   },
-  { label: 'Nilai',       icon: 'star-outline',          route: '/(student)/grades'        },
-  { label: 'Absensi',     icon: 'calendar-outline',      route: '/(student)/attendance'    },
-  { label: 'Poin',        icon: 'warning-outline',       route: '/(student)/violations'    },
-  { label: 'BK',          icon: 'chatbubbles-outline',   route: '/(student)/bk-booking'    },
-  { label: 'Jadwal',      icon: 'time-outline',          route: '/(student)/schedule'      },
-  { label: 'Kuis',        icon: 'help-circle-outline',   route: '/(student)/quiz'          },
-  { label: 'Chat Guru',   icon: 'chatbubble-outline',    route: '/(student)/chat'          },
+  { label: 'Materi',    icon: 'book-outline',          route: '/(student)/materials/all' },
+  { label: 'Tugas',     icon: 'document-text-outline', route: '/(student)/assignments'   },
+  { label: 'Nilai',     icon: 'star-outline',          route: '/(student)/grades'        },
+  { label: 'Absensi',   icon: 'calendar-outline',      route: '/(student)/attendance'    },
+  { label: 'Poin',      icon: 'warning-outline',       route: '/(student)/violations'    },
+  { label: 'BK',        icon: 'chatbubbles-outline',   route: '/(student)/bk-booking'    },
+  { label: 'Jadwal',    icon: 'time-outline',          route: '/(student)/schedule'      },
+  { label: 'Kuis',      icon: 'help-circle-outline',   route: '/(student)/quiz'          },
+  { label: 'Chat',      icon: 'chatbubble-outline',    route: '/(student)/chat'          },
 ] as const;
+
+// Grid 3 kolom — hitung lebar per item berdasarkan layar
+const SCREEN_W    = Dimensions.get('window').width;
+const GRID_PAD    = 16;   // paddingHorizontal kanan+kiri
+const GRID_GAP    = 8;    // gap antar item
+const COLS        = 3;
+const ITEM_W      = (SCREEN_W - GRID_PAD * 2 - GRID_GAP * (COLS - 1)) / COLS;
 
 export default function StudentDashboard() {
   const { profile } = useAuth();
@@ -113,7 +120,7 @@ export default function StudentDashboard() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
       >
-        {/* Menu grid */}
+        {/* Menu grid 3x3 */}
         <Text style={styles.sectionTitle}>Menu</Text>
         <View style={styles.menuGrid}>
           {MENU_ITEMS.map(item => (
@@ -124,9 +131,9 @@ export default function StudentDashboard() {
               activeOpacity={0.7}
             >
               <View style={styles.menuIconBox}>
-                <Ionicons name={item.icon as any} size={22} color={Colors.black} />
+                <Ionicons name={item.icon as any} size={24} color={Colors.black} />
               </View>
-              <Text style={styles.menuLabel}>{item.label}</Text>
+              <Text style={styles.menuLabel} numberOfLines={1}>{item.label}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -247,37 +254,34 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
 
-  // Menu — 3 kolom, label tidak wrap
+  // Menu grid 3 kolom — lebar exact, tidak wrap teks
   menuGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: Spacing.base,
-    gap: 8,
+    paddingHorizontal: GRID_PAD,
+    gap: GRID_GAP,
   },
   menuItem: {
-    width: '30%',
-    flex: 1,
+    width: ITEM_W,
     backgroundColor: Colors.cardBackground,
     borderRadius: Radius.lg,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
+    paddingVertical: Spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    height: 82,
+    gap: 8,
     ...Shadow.xs,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
   },
   menuIconBox: {
-    width: 36, height: 36,
-    borderRadius: 10,
+    width: 44, height: 44,
+    borderRadius: 12,
     backgroundColor: Colors.gray11,
     alignItems: 'center', justifyContent: 'center',
   },
   menuLabel: {
-    fontSize: 11, color: Colors.secondaryLabel, fontWeight: '600',
-    textAlign: 'center', lineHeight: 14,
+    fontSize: 12, color: Colors.secondaryLabel, fontWeight: '600',
+    textAlign: 'center',
   },
 
   // List card
