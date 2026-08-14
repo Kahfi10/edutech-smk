@@ -25,8 +25,14 @@ export const addDocument = async (colPath: string, data: object) => {
   });
 };
 
+/** setDoc tanpa merge — REPLACE penuh (pakai hati-hati) */
 export const setDocument = async (colPath: string, id: string, data: object) => {
   return setDoc(doc(db, colPath, id), data);
+};
+
+/** setDoc dengan merge: true — upsert, tidak hapus field yang tidak disebut */
+export const upsertDocument = async (colPath: string, id: string, data: object) => {
+  return setDoc(doc(db, colPath, id), data, { merge: true });
 };
 
 export const updateDocument = async (colPath: string, id: string, data: object) => {
@@ -56,6 +62,8 @@ export const subscribeCollection = (
   const q = query(collection(db, colPath), ...constraints);
   return onSnapshot(q, snap => {
     callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }, (err) => {
+    console.warn('[Firestore] subscribeCollection error:', colPath, err.code);
   });
 };
 
