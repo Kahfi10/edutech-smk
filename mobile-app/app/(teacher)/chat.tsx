@@ -28,11 +28,49 @@ export default function TeacherChatScreen() {
   const listRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    if (!profile?.classId) { setLoading(false); return; }
-    getCollection('users', where('role', '==', 'STUDENT'), where('classId', '==', profile.classId))
-      .then(d => setStudents(d as any[]))
-      .catch(err => console.warn('load students:', err))
-      .finally(() => setLoading(false));
+    if (!profile) return;
+    const loadStudents = async () => {
+      try {
+        // Teacher tidak punya classId — cari via subjects → classIds
+        // Fallback: tampilkan semua siswa jika tidak ada subjects
+        let classIds: string[] = [];
+
+        if (profile.subjects?.length) {
+          const subjects = await getCollection('subjects', where('teacherId', '==', profile.uid));
+          classIds = (subjects as any[]).flatMap((s: any) => s.classIds ?? []);
+        }
+
+        let students: any[];
+        if (classIds.length > 0) {
+          // Ambil siswa dari semua kelas yang diajar
+          const results = await Promise.all(
+            [...new Set(classIds)].map(cid =>
+              getCollection('users', where('role', '==', 'STUDENT'), where('classId', '==', cid))
+            )
+          );
+          // Flatten + deduplicate by uid
+          const seen = new Set<string>();
+          students = results.flat().filter((s: any) => {
+            if (seen.has(s.uid)) return false;
+            seen.add(s.uid);
+            return true;
+          });
+        } else {
+          // Fallback: semua siswa
+          students = (await getCollection('users', where('role', '==', 'STUDENT'))) as any[];
+        }
+
+        setStudents(students);
+      } catch (err) {
+        console.warn('load students for teacher chat:', err);
+        // Fallback terakhir
+        const all = await getCollection('users', where('role', '==', 'STUDENT'));
+        setStudents(all as any[]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadStudents();
   }, [profile]);
 
   const openChat = async (student: any) => {
