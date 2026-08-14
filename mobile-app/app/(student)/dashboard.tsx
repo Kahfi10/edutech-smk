@@ -112,7 +112,8 @@ export default function StudentDashboard() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-      >        {/* Menu grid */}
+      >
+        {/* Menu grid */}
         <Text style={styles.sectionTitle}>Menu</Text>
         <View style={styles.menuGrid}>
           {MENU_ITEMS.map(item => (
