@@ -276,7 +276,6 @@ const styles = StyleSheet.create({
   menuIconBox: {
     width: 44, height: 44,
     borderRadius: 12,
-    backgroundColor: Colors.gray11,
     alignItems: 'center', justifyContent: 'center',
   },
   menuLabel: {
