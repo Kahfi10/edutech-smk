@@ -12,12 +12,15 @@ import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 const MENU_ITEMS = [
-  { label: 'Materi',       icon: 'book-outline',         route: '/(student)/materials/all' },
-  { label: 'Tugas',        icon: 'document-text-outline', route: '/(student)/assignments'   },
-  { label: 'Nilai',        icon: 'star-outline',          route: '/(student)/grades'        },
-  { label: 'Absensi',      icon: 'calendar-outline',      route: '/(student)/attendance'    },
-  { label: 'Pelanggaran',  icon: 'warning-outline',       route: '/(student)/violations'    },
-  { label: 'Konseling BK', icon: 'chatbubbles-outline',   route: '/(student)/bk-booking'    },
+  { label: 'Materi',      icon: 'book-outline',          route: '/(student)/materials/all' },
+  { label: 'Tugas',       icon: 'document-text-outline', route: '/(student)/assignments'   },
+  { label: 'Nilai',       icon: 'star-outline',          route: '/(student)/grades'        },
+  { label: 'Absensi',     icon: 'calendar-outline',      route: '/(student)/attendance'    },
+  { label: 'Poin',        icon: 'warning-outline',       route: '/(student)/violations'    },
+  { label: 'BK',          icon: 'chatbubbles-outline',   route: '/(student)/bk-booking'    },
+  { label: 'Jadwal',      icon: 'time-outline',          route: '/(student)/schedule'      },
+  { label: 'Kuis',        icon: 'help-circle-outline',   route: '/(student)/quiz'          },
+  { label: 'Chat Guru',   icon: 'chatbubble-outline',    route: '/(student)/chat'          },
 ] as const;
 
 export default function StudentDashboard() {
@@ -72,22 +75,20 @@ export default function StudentDashboard() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <View>
-          <Text style={styles.greeting}>Selamat datang,</Text>
-          <Text style={styles.name}>{profile?.name}</Text>
+      {/* Header + Info — keduanya FIXED di luar ScrollView agar tidak tertutup */}
+      <View style={[styles.topBlock, { paddingTop: insets.top + 12 }]}>
+        {/* Greeting */}
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.greeting}>Selamat datang,</Text>
+            <Text style={styles.name}>{profile?.name}</Text>
+          </View>
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} hitSlop={8}>
+            <Ionicons name="log-out-outline" size={22} color={Colors.white} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn} hitSlop={8}>
-          <Ionicons name="log-out-outline" size={22} color={Colors.white} />
-        </TouchableOpacity>
-      </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
-      >
-        {/* Info strip */}
+        {/* Info strip — langsung di bawah greeting, masih di dalam area hitam */}
         <View style={styles.infoStrip}>
           <View style={styles.infoItem}>
             <Text style={styles.infoValue}>{profile?.nis ?? '-'}</Text>
@@ -103,11 +104,15 @@ export default function StudentDashboard() {
             <Text style={[styles.infoValue, violationPoints >= 80 && styles.dangerText]}>
               {violationPoints}
             </Text>
-            <Text style={styles.infoLabel}>Poin Pelanggar.</Text>
+            <Text style={styles.infoLabel}>Poin</Text>
           </View>
         </View>
+      </View>
 
-        {/* Menu grid */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+      >        {/* Menu grid */}
         <Text style={styles.sectionTitle}>Menu</Text>
         <View style={styles.menuGrid}>
           {MENU_ITEMS.map(item => (
@@ -189,14 +194,17 @@ export default function StudentDashboard() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
 
-  // Header
-  header: {
+  // Header + InfoStrip sebagai satu blok fixed
+  topBlock: {
     backgroundColor: Colors.black,
     paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.base,
+  },
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    marginBottom: Spacing.base,
   },
   greeting: { ...Typography.subheadline, color: 'rgba(255,255,255,0.55)', marginBottom: 2 },
   name: { ...Typography.title2, color: Colors.white },
@@ -207,26 +215,24 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
-  // Info strip
+  // Info strip — di dalam topBlock (hitam), bukan floating
   infoStrip: {
-    backgroundColor: Colors.cardBackground,
+    backgroundColor: 'rgba(255,255,255,0.08)',
     flexDirection: 'row',
-    marginHorizontal: Spacing.base,
-    marginTop: -14,
-    borderRadius: Radius.lg,
-    padding: Spacing.base,
-    ...Shadow.md,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
   },
   infoItem: { flex: 1, alignItems: 'center' },
-  infoValue: { ...Typography.title3, color: Colors.black },
-  infoLabel: { ...Typography.caption1, color: Colors.tertiaryLabel, marginTop: 2 },
+  infoValue: { ...Typography.title3, color: Colors.white },
+  infoLabel: { ...Typography.caption2, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
   infoSep: {
     width: StyleSheet.hairlineWidth,
     height: '100%',
-    backgroundColor: Colors.separator,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     marginHorizontal: 4,
   },
-  dangerText: { color: Colors.gray1 },
+  dangerText: { color: '#FF9F9F' },
 
   // Section title
   sectionTitle: {
@@ -240,35 +246,38 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
 
-  // Menu
+  // Menu — 3 kolom, label tidak wrap
   menuGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: Spacing.base,
-    gap: 10,
+    gap: 8,
   },
   menuItem: {
     width: '30%',
     flex: 1,
     backgroundColor: Colors.cardBackground,
     borderRadius: Radius.lg,
-    paddingVertical: Spacing.base,
-    paddingHorizontal: Spacing.sm,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    height: 90,              // ← fixed height, tidak stretch
+    gap: 6,
+    height: 82,
     ...Shadow.xs,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.separator,
   },
   menuIconBox: {
-    width: 40, height: 40,
-    borderRadius: 11,
+    width: 36, height: 36,
+    borderRadius: 10,
     backgroundColor: Colors.gray11,
     alignItems: 'center', justifyContent: 'center',
   },
-  menuLabel: { ...Typography.caption1, color: Colors.secondaryLabel, fontWeight: '500', textAlign: 'center' },
+  menuLabel: {
+    fontSize: 11, color: Colors.secondaryLabel, fontWeight: '600',
+    textAlign: 'center', lineHeight: 14,
+  },
 
   // List card
   listCard: {
