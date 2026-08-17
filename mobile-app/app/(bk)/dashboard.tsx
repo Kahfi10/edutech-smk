@@ -1,14 +1,17 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAuth } from '../../src/context/AuthContext';
 import { logoutUser } from '../../src/firebase/auth.service';
-import { subscribeCollection, getCollection } from '../../src/firebase/firestore.service';
-import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
+import { subscribeCollection, getCollection, where } from '../../src/firebase/firestore.service';
+import { SkeletonDashboard } from '../../src/components/ui/Skeleton';
+import { AnimatedNumber } from '../../src/components/ui/AnimatedNumber';
+import { hapticWarning } from '../../src/services/haptics';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 export default function BKDashboard() {
@@ -19,57 +22,77 @@ export default function BKDashboard() {
   const [pendingViolations, setPendingViolations] = useState(0);
   const [trendData, setTrendData] = useState<{ type: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(() => { setRefreshing(true); setTimeout(() => setRefreshing(false), 800); }, []);
 
   useEffect(() => {
     if (!profile) return;
-    const unsub = subscribeCollection('counseling', (data) => {
-      const mine = data.filter((c: any) => c.bkTeacherId === profile.uid);
-      setStats({
-        booked:   mine.filter((c: any) => c.status === 'booked').length,
-        ongoing:  mine.filter((c: any) => c.status === 'ongoing').length,
-        resolved: mine.filter((c: any) => c.status === 'resolved').length,
-      });
-      const trend: Record<string, number> = {};
-      mine.forEach((c: any) => { trend[c.type] = (trend[c.type] ?? 0) + 1; });
-      setTrendData(Object.entries(trend).map(([type, count]) => ({ type, count })).sort((a, b) => b.count - a.count));
-      setLoading(false);
-    });
+
+    // Filter by bkTeacherId untuk avoid permission issues
+    // Rules sudah diupdate: BK bisa baca semua counseling, tapi filter tetap lebih efisien
+    const unsub = subscribeCollection(
+      'counseling',
+      (data) => {
+        setStats({
+          booked:   data.filter((c: any) => c.status === 'booked').length,
+          ongoing:  data.filter((c: any) => c.status === 'ongoing').length,
+          resolved: data.filter((c: any) => c.status === 'resolved').length,
+        });
+        const trend: Record<string, number> = {};
+        data.forEach((c: any) => { trend[c.type] = (trend[c.type] ?? 0) + 1; });
+        setTrendData(
+          Object.entries(trend)
+            .map(([type, count]) => ({ type, count }))
+            .sort((a, b) => b.count - a.count)
+        );
+        setLoading(false);
+      },
+      where('bkTeacherId', '==', profile.uid), // filter client di sisi query
+    );
 
     getCollection('violations').then(v =>
       setPendingViolations((v as any[]).filter(x => x.status === 'pending').length)
-    );
-    return unsub;
+    ).catch(() => setPendingViolations(0));
+
+    // Safety: jika subscription gagal, hentikan loading setelah 5 detik
+    const timeout = setTimeout(() => setLoading(false), 5000);
+
+    return () => {
+      unsub();
+      clearTimeout(timeout);
+    };
   }, [profile]);
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  if (loading) return <SkeletonDashboard rows={3} />;
 
   const maxCount = Math.max(...trendData.map(t => t.count), 1);
 
   const NAV = [
-    { label: 'Jadwal Konseling',    icon: 'calendar-outline',    route: '/(bk)/counseling/schedule' },
-    { label: 'Manajemen Kasus',     icon: 'folder-outline',      route: '/(bk)/counseling/cases'    },
-    { label: 'Chat Konfidensial',   icon: 'chatbubbles-outline',  route: '/(bk)/chat/all'            },
+    { label: 'Jadwal Konseling',  icon: 'calendar-outline',   route: '/(bk)/counseling/schedule' },
+    { label: 'Manajemen Kasus',   icon: 'folder-outline',     route: '/(bk)/counseling/cases'    },
+    { label: 'Chat Konfidensial', icon: 'chatbubbles-outline', route: '/(bk)/chat/all'            },
   ] as const;
 
   return (
-    <View style={styles.container}>
+    <Animated.View entering={FadeIn.duration(300)} style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
           <Text style={styles.role}>Guru Bimbingan Konseling</Text>
           <Text style={styles.name}>{profile?.name}</Text>
         </View>
         <TouchableOpacity
-          onPress={() => Alert.alert('Keluar', 'Yakin?', [
-            { text: 'Batal', style: 'cancel' },
-            { text: 'Keluar', style: 'destructive', onPress: logoutUser },
-          ])}
+          onPress={() => { hapticWarning(); logoutUser(); }}
           style={styles.logoutBtn} hitSlop={8}
         >
           <Ionicons name="log-out-outline" size={22} color={Colors.white} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gray5} colors={[Colors.black]} />}
+      >
         {/* Stats */}
         <View style={styles.statsRow}>
           {[
@@ -78,7 +101,7 @@ export default function BKDashboard() {
             { label: 'Selesai',  value: stats.resolved },
           ].map(s => (
             <View key={s.label} style={styles.statCard}>
-              <Text style={styles.statValue}>{s.value}</Text>
+              <AnimatedNumber value={s.value} style={styles.statValue as any} />
               <Text style={styles.statLabel}>{s.label}</Text>
             </View>
           ))}
@@ -136,7 +159,7 @@ export default function BKDashboard() {
           </>
         )}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 

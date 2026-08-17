@@ -1,14 +1,17 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAuth } from '../../src/context/AuthContext';
 import { logoutUser } from '../../src/firebase/auth.service';
 import { subscribeCollection, getCollection, where } from '../../src/firebase/firestore.service';
-import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
+import { SkeletonDashboard } from '../../src/components/ui/Skeleton';
+import { AnimatedNumber } from '../../src/components/ui/AnimatedNumber';
+import { hapticWarning } from '../../src/services/haptics';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 const QUICK_ACTIONS = [
@@ -25,6 +28,8 @@ export default function TeacherDashboard() {
   const [stats, setStats] = useState({ materials: 0, assignments: 0, pending: 0 });
   const [recentAssignments, setRecentAssignments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(() => { setRefreshing(true); setTimeout(() => setRefreshing(false), 800); }, []);
 
   useEffect(() => {
     if (!profile) return;
@@ -46,10 +51,10 @@ export default function TeacherDashboard() {
     return () => { unsubA(); unsubM(); unsubS(); };
   }, [profile]);
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  if (loading) return <SkeletonDashboard rows={4} />;
 
   return (
-    <View style={styles.container}>
+    <Animated.View entering={FadeIn.duration(300)} style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
@@ -57,17 +62,18 @@ export default function TeacherDashboard() {
           <Text style={styles.name}>{profile?.name}</Text>
         </View>
         <TouchableOpacity
-          onPress={() => Alert.alert('Keluar', 'Yakin ingin keluar?', [
-            { text: 'Batal', style: 'cancel' },
-            { text: 'Keluar', style: 'destructive', onPress: logoutUser },
-          ])}
+          onPress={() => { hapticWarning(); logoutUser(); }}
           style={styles.logoutBtn} hitSlop={8}
         >
           <Ionicons name="log-out-outline" size={22} color={Colors.white} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gray5} colors={[Colors.black]} />}
+      >
         {/* Stats */}
         <View style={styles.statsRow}>
           {[
@@ -77,7 +83,7 @@ export default function TeacherDashboard() {
           ].map(s => (
             <View key={s.label} style={styles.statCard}>
               <Ionicons name={s.icon as any} size={20} color={Colors.gray5} />
-              <Text style={styles.statValue}>{s.value}</Text>
+              <AnimatedNumber value={s.value} style={styles.statValue as any} />
               <Text style={styles.statLabel}>{s.label}</Text>
             </View>
           ))}
@@ -125,7 +131,7 @@ export default function TeacherDashboard() {
           </>
         )}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 

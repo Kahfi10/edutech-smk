@@ -2,6 +2,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { View, Platform, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { ToastProvider } from '../src/context/ToastContext';
+import { ToastContainer } from '../src/components/ui/Toast';
 import { StatusBar } from 'expo-status-bar';
 import { PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -16,7 +18,7 @@ const ROLE_ROUTES: Record<string, string> = {
   WALI:    '/(wali)/dashboard',
   BK:      '/(bk)/dashboard',
   PIKET:   '/(piket)/dashboard',
-  ADMIN:   '/(admin)',
+  ADMIN:   '/(admin)/dashboard',
 };
 
 // AuthGuard — selalu mounted, tangani redirect login/logout
@@ -32,6 +34,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (!profile && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (profile && inAuthGroup) {
+      // Web admin → redirect ke admin web panel
+      // Mobile admin → masuk ke tab native admin
       if (profile.role === 'ADMIN' && Platform.OS === 'web') {
         (window as any).location.href = 'https://edutech-smk-admin.web.app';
         return;
@@ -80,24 +84,28 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <PaperProvider theme={PaperTheme}>
-        <AuthProvider>
-          <AuthGuard>
-            <StatusBar style="dark" />
-            <View style={{ flex: 1 }}>
-              <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(student)" />
-                <Stack.Screen name="(teacher)" />
-                <Stack.Screen name="(wali)" />
-                <Stack.Screen name="(bk)" />
-                <Stack.Screen name="(piket)" />
-                <Stack.Screen name="(admin)" />
-              </Stack>
-              <MockRoleSwitcher />
-            </View>
-          </AuthGuard>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <AuthGuard>
+              <StatusBar style="dark" />
+              <View style={{ flex: 1 }}>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(student)" />
+                  <Stack.Screen name="(teacher)" />
+                  <Stack.Screen name="(wali)" />
+                  <Stack.Screen name="(bk)" />
+                  <Stack.Screen name="(piket)" />
+                  <Stack.Screen name="(admin)" />
+                </Stack>
+                <MockRoleSwitcher />
+                {/* Toast overlay — di atas semua konten */}
+                <ToastContainer />
+              </View>
+            </AuthGuard>
+          </AuthProvider>
+        </ToastProvider>
       </PaperProvider>
     </SafeAreaProvider>
   );

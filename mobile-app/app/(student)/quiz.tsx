@@ -1,7 +1,10 @@
-﻿import React, { useEffect, useState, useRef } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Animated,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
 } from 'react-native';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
@@ -22,7 +25,11 @@ export default function QuizScreen() {
   const [answers, setAnswers]       = useState<Record<number, number>>({});
   const [submitted, setSubmitted]   = useState(false);
   const [result, setResult]         = useState<{ score: number; correct: number; total: number } | null>(null);
-  const progress = useRef(new Animated.Value(0)).current;
+  const progress = useSharedValue(0);
+
+  const progressStyle = useAnimatedStyle(() => ({
+    width: `${progress.value * 100}%`,
+  }));
 
   useEffect(() => {
     if (!profile?.classId) return;
@@ -51,7 +58,7 @@ export default function QuizScreen() {
     setAnswers({});
     setSubmitted(false);
     setResult(null);
-    Animated.timing(progress, { toValue: 0, duration: 0, useNativeDriver: false }).start();
+    progress.value = withTiming(0, { duration: 0 });
   };
 
   const selectAnswer = (qIdx: number, aIdx: number, total: number) => {
@@ -59,11 +66,7 @@ export default function QuizScreen() {
     const newAnswers = { ...answers, [qIdx]: aIdx };
     setAnswers(newAnswers);
     const answered = Object.keys(newAnswers).length;
-    Animated.timing(progress, {
-      toValue: answered / total,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
+    progress.value = withTiming(answered / total, { duration: 320 });
   };
 
   const submitQuiz = async () => {
@@ -206,9 +209,7 @@ export default function QuizScreen() {
 
         {/* Progress bar */}
         <View style={styles.progressBg}>
-          <Animated.View style={[styles.progressFill, {
-            width: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-          }]} />
+          <Animated.View style={[styles.progressFill, progressStyle]} />
         </View>
 
         <ScrollView

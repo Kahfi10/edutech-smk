@@ -92,11 +92,9 @@ export default function BKChatScreen() {
       Alert.alert('Gagal kirim', err.message);
       setInputText(text);
     } finally {
-      setSaving(false);
+      setSending(false);
     }
   };
-
-  const setSaving = setSending; // alias
 
   if (loading) return <LoadingSpinner fullScreen />;
 

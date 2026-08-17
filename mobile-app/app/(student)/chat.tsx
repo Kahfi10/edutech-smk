@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity,
+  View, Text, SectionList, FlatList, StyleSheet, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,42 +14,67 @@ import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 import { Timestamp } from 'firebase/firestore';
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Room ID harus konsisten antara BK dan siswa.
+ *  BK  ↔ Siswa : separator '_bk_'  (type bk_confidential)
+ *  Guru ↔ Siswa : separator '_dm_'  (type dm)
+ */
+function getRoomId(uidA: string, uidB: string, type: 'dm' | 'bk') {
+  const sep = type === 'bk' ? '_bk_' : '_dm_';
+  return [uidA, uidB].sort().join(sep);
+}
+
 export default function StudentChatScreen() {
   const { profile } = useAuth();
   const insets = useSafeAreaInsets();
-  const [teachers, setTeachers]             = useState<any[]>([]);
-  const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
-  const [chatRoomId, setChatRoomId]         = useState('');
-  const [messages, setMessages]             = useState<any[]>([]);
-  const [inputText, setInputText]           = useState('');
-  const [loading, setLoading]               = useState(true);
-  const [sending, setSending]               = useState(false);
-  const [openingChat, setOpeningChat]       = useState(false);
-  const listRef = useRef<FlatList>(null);
 
+  // contacts — sections
+  const [sections, setSections]               = useState<{ title: string; data: any[] }[]>([]);
+  const [selectedContact, setSelectedContact] = useState<any>(null);
+  const [chatRoomId, setChatRoomId]           = useState('');
+  const [messages, setMessages]               = useState<any[]>([]);
+  const [inputText, setInputText]             = useState('');
+  const [loading, setLoading]                 = useState(true);
+  const [sending, setSending]                 = useState(false);
+  const [openingChat, setOpeningChat]         = useState(false);
+  const listRef  = useRef<SectionList>(null);   // contact list
+  const flatRef  = useRef<FlatList>(null);       // messages
+
+  // ── Load teachers + BK teachers ──────────────────────────────────────────
   useEffect(() => {
-    getCollection('users', where('role', '==', 'TEACHER'))
-      .then(d => setTeachers(d as any[]))
-      .catch(err => console.warn('load teachers:', err))
+    if (!profile) return;
+    Promise.all([
+      getCollection('users', where('role', '==', 'TEACHER')),
+      getCollection('users', where('role', '==', 'BK')),
+    ])
+      .then(([teachers, bkTeachers]) => {
+        const built: { title: string; data: any[] }[] = [];
+        if ((teachers as any[]).length > 0)
+          built.push({ title: 'Guru Mata Pelajaran', data: teachers as any[] });
+        if ((bkTeachers as any[]).length > 0)
+          built.push({ title: 'Guru BK', data: bkTeachers as any[] });
+        setSections(built);
+      })
+      .catch(err => console.warn('load contacts:', err))
       .finally(() => setLoading(false));
   }, [profile]);
 
-  const openChat = async (teacher: any) => {
+  // ── Open chat ─────────────────────────────────────────────────────────────
+  const openChat = async (person: any) => {
     if (openingChat) return;
     setOpeningChat(true);
     try {
-      const roomId = [profile!.uid, teacher.uid].sort().join('_dm_');
+      const isBK = person.role === 'BK';
+      const roomId = getRoomId(profile!.uid, person.uid, isBK ? 'bk' : 'dm');
 
-      // FIX: Buat/update room DULU sebelum subscribe messages
-      // Pakai upsertDocument (merge:true) agar tidak overwrite data existing
       await upsertDocument('chats', roomId, {
-        participants: [profile!.uid, teacher.uid],
-        type: 'dm',
+        participants: [profile!.uid, person.uid],
+        type: isBK ? 'bk_confidential' : 'dm',
         updatedAt: Timestamp.now(),
       });
 
-      // Baru set state setelah room sudah ada di Firestore
-      setSelectedTeacher(teacher);
+      setSelectedContact({ ...person, isBK });
       setChatRoomId(roomId);
     } catch (err: any) {
       Alert.alert('Error', `Gagal membuka chat: ${err.message}`);
@@ -58,7 +83,7 @@ export default function StudentChatScreen() {
     }
   };
 
-  // Subscribe messages setelah chatRoomId tersedia (room sudah pasti ada)
+  // ── Subscribe messages ────────────────────────────────────────────────────
   useEffect(() => {
     if (!chatRoomId) return;
     const unsub = subscribeCollection(
@@ -68,35 +93,33 @@ export default function StudentChatScreen() {
           (a: any, b: any) => (a.timestamp?.toMillis?.() ?? 0) - (b.timestamp?.toMillis?.() ?? 0)
         );
         setMessages(sorted);
-        // Scroll ke bawah saat ada pesan baru
-        setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
+        setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 150);
       },
       orderBy('timestamp', 'asc'),
     );
     return unsub;
   }, [chatRoomId]);
 
+  // ── Send message ──────────────────────────────────────────────────────────
   const sendMessage = async () => {
     if (!inputText.trim() || !chatRoomId || sending) return;
     const text = inputText.trim();
     setInputText('');
     setSending(true);
     try {
-      // Kirim pesan ke subcollection
       await addDocument(`chats/${chatRoomId}/messages`, {
         senderId: profile!.uid,
         text,
         timestamp: Timestamp.now(),
         readBy: [profile!.uid],
       });
-      // Update lastMessage di chat room
       await updateDocument('chats', chatRoomId, {
         lastMessage: text,
         updatedAt: Timestamp.now(),
       });
     } catch (err: any) {
       Alert.alert('Gagal kirim', err.message);
-      setInputText(text); // kembalikan teks
+      setInputText(text);
     } finally {
       setSending(false);
     }
@@ -104,88 +127,119 @@ export default function StudentChatScreen() {
 
   if (loading) return <LoadingSpinner fullScreen />;
 
-  // ─── Teacher list ──────────────────────────────────────────
-  if (!selectedTeacher) {
+  // ── Contact list ──────────────────────────────────────────────────────────
+  if (!selectedContact) {
+    const isEmpty = sections.every(s => s.data.length === 0) || sections.length === 0;
+
     return (
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-          <Text style={styles.headerTitle}>Chat Guru</Text>
-          <Text style={styles.headerSub}>Pilih guru untuk mulai percakapan</Text>
+          <Text style={styles.headerTitle}>Pesan</Text>
+          <Text style={styles.headerSub}>Pilih guru atau guru BK untuk memulai percakapan</Text>
         </View>
 
         {openingChat && (
           <View style={styles.loadingOverlay}>
-            <ActivityIndicator color={Colors.black} />
+            <ActivityIndicator color={Colors.black} size="small" />
             <Text style={styles.loadingText}>Membuka chat...</Text>
           </View>
         )}
 
-        <FlatList
-          data={teachers}
-          keyExtractor={i => i.uid}
-          style={{ flex: 1 }}
-          contentContainerStyle={teachers.length === 0 ? styles.emptyContainer : { paddingVertical: 6 }}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Ionicons name="chatbubbles-outline" size={48} color={Colors.gray8} />
-              <Text style={styles.emptyTitle}>Belum ada guru tersedia</Text>
-              <Text style={styles.emptySub}>Guru Mapel belum terdaftar di sistem</Text>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.teacherRow}
-              onPress={() => openChat(item)}
-              activeOpacity={0.75}
-              disabled={openingChat}
-            >
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{item.name?.[0]?.toUpperCase()}</Text>
+        {isEmpty ? (
+          <View style={styles.empty}>
+            <Ionicons name="chatbubbles-outline" size={48} color={Colors.gray8} />
+            <Text style={styles.emptyTitle}>Belum ada kontak tersedia</Text>
+          </View>
+        ) : (
+          <SectionList
+            ref={listRef}
+            sections={sections}
+            keyExtractor={i => i.uid}
+            stickySectionHeadersEnabled={false}
+            contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+            renderSectionHeader={({ section }) => (
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+                {section.title === 'Guru BK' && (
+                  <View style={styles.confidentialBadge}>
+                    <Ionicons name="lock-closed" size={10} color={Colors.gray5} />
+                    <Text style={styles.confidentialText}>Konfidensial</Text>
+                  </View>
+                )}
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.teacherName}>{item.name}</Text>
-                <Text style={styles.teacherSub}>Guru Mata Pelajaran</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={Colors.gray8} />
-            </TouchableOpacity>
-          )}
-          ItemSeparatorComponent={() => (
-            <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: Colors.separator, marginLeft: 64 }} />
-          )}
-        />
+            )}
+            renderItem={({ item }) => {
+              const isBK = item.role === 'BK';
+              return (
+                <TouchableOpacity
+                  style={styles.contactRow}
+                  onPress={() => openChat(item)}
+                  activeOpacity={0.75}
+                  disabled={openingChat}
+                >
+                  <View style={[styles.avatar, isBK && styles.avatarBK]}>
+                    <Text style={styles.avatarText}>{item.name?.[0]?.toUpperCase()}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.contactName}>{item.name}</Text>
+                    <Text style={styles.contactSub}>
+                      {isBK ? 'Guru Bimbingan Konseling' : 'Guru Mata Pelajaran'}
+                    </Text>
+                  </View>
+                  {isBK && (
+                    <Ionicons name="lock-closed-outline" size={14} color={Colors.gray7} style={{ marginRight: 4 }} />
+                  )}
+                  <Ionicons name="chevron-forward" size={18} color={Colors.gray8} />
+                </TouchableOpacity>
+              );
+            }}
+            ItemSeparatorComponent={() => (
+              <View style={styles.separator} />
+            )}
+          />
+        )}
       </View>
     );
   }
 
-  // ─── Chat room ─────────────────────────────────────────────
+  // ── Chat room ─────────────────────────────────────────────────────────────
+  const isBKChat = selectedContact.isBK;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      {/* Chat header */}
+      {/* Header */}
       <View style={[styles.chatHeader, { paddingTop: insets.top + 8 }]}>
         <TouchableOpacity
-          onPress={() => { setSelectedTeacher(null); setChatRoomId(''); setMessages([]); }}
+          onPress={() => { setSelectedContact(null); setChatRoomId(''); setMessages([]); }}
           hitSlop={8}
         >
           <Ionicons name="chevron-back" size={24} color={Colors.white} />
         </TouchableOpacity>
         <View style={styles.chatAvatar}>
-          <Text style={styles.chatAvatarText}>{selectedTeacher.name?.[0]?.toUpperCase()}</Text>
+          <Text style={styles.chatAvatarText}>{selectedContact.name?.[0]?.toUpperCase()}</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.chatName}>{selectedTeacher.name}</Text>
-          <Text style={styles.chatSub}>Guru Mata Pelajaran</Text>
+          <Text style={styles.chatName}>{selectedContact.name}</Text>
+          <Text style={styles.chatSub}>
+            {isBKChat ? 'Guru BK · Konfidensial' : 'Guru Mata Pelajaran'}
+          </Text>
         </View>
+        {isBKChat && (
+          <View style={styles.lockBadge}>
+            <Ionicons name="lock-closed" size={12} color={Colors.white} />
+          </View>
+        )}
       </View>
 
-      {/* Messages */}
+      {/* Messages — FlatList (bukan SectionList, tidak ada sections di chat) */}
       <FlatList
-        ref={listRef}
+        ref={flatRef}
         data={messages}
-        keyExtractor={i => i.id ?? i.timestamp?.toString()}
+        keyExtractor={i => i.id ?? String(i.timestamp?.toMillis?.() ?? Math.random())}
         style={{ flex: 1 }}
         contentContainerStyle={[
           styles.messageList,
@@ -193,14 +247,20 @@ export default function StudentChatScreen() {
         ]}
         ListEmptyComponent={
           <View style={styles.emptyChat}>
-            <Ionicons name="chatbubble-outline" size={40} color={Colors.gray8} />
+            {isBKChat && <Ionicons name="lock-closed-outline" size={36} color={Colors.gray8} />}
+            {!isBKChat && <Ionicons name="chatbubble-outline" size={36} color={Colors.gray8} />}
             <Text style={styles.emptyChatText}>
-              Mulai percakapan dengan {selectedTeacher.name}
+              {isBKChat
+                ? 'Percakapan bersifat rahasia'
+                : `Mulai percakapan dengan ${selectedContact.name}`}
             </Text>
+            {isBKChat && (
+              <Text style={styles.emptyChatSub}>Hanya kamu dan Guru BK yang bisa membaca</Text>
+            )}
           </View>
         }
         onContentSizeChange={() => {
-          if (messages.length > 0) listRef.current?.scrollToEnd({ animated: false });
+          if (messages.length > 0) flatRef.current?.scrollToEnd({ animated: false });
         }}
         renderItem={({ item }) => {
           const isMe = item.senderId === profile?.uid;
@@ -219,13 +279,13 @@ export default function StudentChatScreen() {
         }}
       />
 
-      {/* Input bar */}
+      {/* Input */}
       <View style={[styles.inputBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
         <TextInput
           style={styles.msgInput}
           value={inputText}
           onChangeText={setInputText}
-          placeholder="Tulis pesan..."
+          placeholder={isBKChat ? 'Tulis pesan rahasia...' : 'Tulis pesan...'}
           placeholderTextColor={Colors.gray7}
           multiline
           maxLength={500}
@@ -250,6 +310,7 @@ export default function StudentChatScreen() {
 
 const styles = StyleSheet.create({
   container:       { flex: 1, backgroundColor: Colors.background },
+
   header: {
     backgroundColor: Colors.black,
     paddingHorizontal: Spacing.xl,
@@ -257,14 +318,31 @@ const styles = StyleSheet.create({
   },
   headerTitle:     { ...Typography.title3, color: Colors.white },
   headerSub:       { ...Typography.footnote, color: 'rgba(255,255,255,0.5)', marginTop: 4 },
+
   loadingOverlay: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: Colors.gray11, margin: Spacing.base,
     borderRadius: Radius.md, padding: Spacing.md,
   },
   loadingText:     { ...Typography.footnote, color: Colors.secondaryLabel },
-  emptyContainer:  { flex: 1 },
-  teacherRow: {
+
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: Spacing.base, paddingTop: 18, paddingBottom: 6,
+    backgroundColor: Colors.background,
+  },
+  sectionTitle: {
+    ...Typography.footnote, color: Colors.secondaryLabel,
+    fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5,
+  },
+  confidentialBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: Colors.gray10, borderRadius: 8,
+    paddingHorizontal: 6, paddingVertical: 2,
+  },
+  confidentialText: { ...Typography.caption2, color: Colors.gray5 },
+
+  contactRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingHorizontal: Spacing.base, paddingVertical: 13,
     backgroundColor: Colors.cardBackground,
@@ -273,9 +351,19 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: Colors.gray10, alignItems: 'center', justifyContent: 'center',
   },
+  avatarBK: { backgroundColor: Colors.gray8 },
   avatarText:      { ...Typography.headline, color: Colors.gray3, fontWeight: '600' },
-  teacherName:     { ...Typography.subheadline, color: Colors.black, fontWeight: '500' },
-  teacherSub:      { ...Typography.caption1, color: Colors.tertiaryLabel, marginTop: 2 },
+  contactName:     { ...Typography.subheadline, color: Colors.black, fontWeight: '500' },
+  contactSub:      { ...Typography.caption1, color: Colors.tertiaryLabel, marginTop: 2 },
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: Colors.separator,
+    marginLeft: 68,
+  },
+
+  empty:           { alignItems: 'center', justifyContent: 'center', padding: 48, gap: 10 },
+  emptyTitle:      { ...Typography.headline, color: Colors.secondaryLabel },
+
   chatHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: Colors.black,
@@ -289,6 +377,12 @@ const styles = StyleSheet.create({
   chatAvatarText:  { ...Typography.subheadline, color: Colors.white, fontWeight: '700' },
   chatName:        { ...Typography.headline, color: Colors.white },
   chatSub:         { ...Typography.caption2, color: 'rgba(255,255,255,0.5)' },
+  lockBadge: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
   messageList:     { padding: Spacing.base, paddingBottom: Spacing.sm },
   bubbleWrap:      { marginBottom: 4 },
   bubbleWrapMe:    { alignItems: 'flex-end' },
@@ -303,6 +397,7 @@ const styles = StyleSheet.create({
   bubbleTextThem:  { color: Colors.black },
   bubbleTime:      { ...Typography.caption2, color: Colors.tertiaryLabel, marginTop: 2, marginHorizontal: 4 },
   bubbleTimeMe:    { textAlign: 'right' },
+
   inputBar: {
     flexDirection: 'row', gap: 8,
     paddingHorizontal: Spacing.md, paddingTop: Spacing.sm,
@@ -321,9 +416,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
   },
   sendBtnDisabled: { opacity: 0.35 },
-  empty:           { alignItems: 'center', justifyContent: 'center', padding: 48, gap: 10 },
-  emptyTitle:      { ...Typography.headline, color: Colors.secondaryLabel },
-  emptySub:        { ...Typography.subheadline, color: Colors.tertiaryLabel, textAlign: 'center' },
-  emptyChat:       { alignItems: 'center', gap: 12, paddingVertical: 32 },
+
+  emptyChat:       { alignItems: 'center', gap: 10, paddingVertical: 32 },
   emptyChatText:   { ...Typography.subheadline, color: Colors.tertiaryLabel, textAlign: 'center' },
+  emptyChatSub:    { ...Typography.footnote, color: Colors.quaternaryLabel, textAlign: 'center' },
 });

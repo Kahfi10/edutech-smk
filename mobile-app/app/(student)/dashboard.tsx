@@ -1,26 +1,31 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Dimensions,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  Dimensions, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAuth } from '../../src/context/AuthContext';
 import { logoutUser } from '../../src/firebase/auth.service';
 import { subscribeCollection, getCollection, where, orderBy } from '../../src/firebase/firestore.service';
-import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
+import { SkeletonDashboard } from '../../src/components/ui/Skeleton';
+import { AnimatedNumber } from '../../src/components/ui/AnimatedNumber';
+import { hapticWarning, hapticLight } from '../../src/services/haptics';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 const MENU_ITEMS = [
-  { label: 'Materi',    icon: 'book-outline',          route: '/(student)/materials/all' },
-  { label: 'Tugas',     icon: 'document-text-outline', route: '/(student)/assignments'   },
-  { label: 'Nilai',     icon: 'star-outline',          route: '/(student)/grades'        },
-  { label: 'Absensi',   icon: 'calendar-outline',      route: '/(student)/attendance'    },
-  { label: 'Poin',      icon: 'warning-outline',       route: '/(student)/violations'    },
-  { label: 'BK',        icon: 'chatbubbles-outline',   route: '/(student)/bk-booking'    },
-  { label: 'Jadwal',    icon: 'time-outline',          route: '/(student)/schedule'      },
-  { label: 'Kuis',      icon: 'help-circle-outline',   route: '/(student)/quiz'          },
-  { label: 'Chat',      icon: 'chatbubble-outline',    route: '/(student)/chat'          },
+  { label: 'Materi',       icon: 'book-outline',          route: '/(student)/materials/pemweb' },
+  { label: 'Tugas',        icon: 'document-text-outline', route: '/(student)/assignments'      },
+  { label: 'Nilai',        icon: 'star-outline',          route: '/(student)/grades'           },
+  { label: 'Scan Absensi', icon: 'scan-outline',          route: '/(student)/absensi-scan'     },
+  { label: 'Poin',         icon: 'warning-outline',       route: '/(student)/violations'       },
+  { label: 'BK',           icon: 'chatbubbles-outline',   route: '/(student)/bk-booking'       },
+  { label: 'Jadwal',       icon: 'time-outline',          route: '/(student)/schedule'         },
+  { label: 'Kuis',         icon: 'help-circle-outline',   route: '/(student)/quiz'             },
+  { label: 'Chat',         icon: 'chatbubble-outline',    route: '/(student)/chat'             },
+  { label: 'Kartu QR',     icon: 'qr-code-outline',       route: '/(student)/qr-card'          },
 ] as const;
 
 // Grid 3 kolom — hitung lebar per item berdasarkan layar
@@ -38,6 +43,12 @@ export default function StudentDashboard() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [violationPoints, setViolationPoints] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 800);
+  }, []);
 
   useEffect(() => {
     if (!profile) return;
@@ -72,16 +83,15 @@ export default function StudentDashboard() {
     return () => { unsubAssign(); unsubAnn(); };
   }, [profile]);
 
-  const handleLogout = () =>
-    Alert.alert('Keluar', 'Yakin ingin keluar?', [
-      { text: 'Batal', style: 'cancel' },
-      { text: 'Keluar', style: 'destructive', onPress: logoutUser },
-    ]);
+  const handleLogout = () => {
+    hapticWarning();
+    logoutUser();
+  };
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  if (loading) return <SkeletonDashboard rows={4} />;
 
   return (
-    <View style={styles.container}>
+    <Animated.View entering={FadeIn.duration(300)} style={styles.container}>
       {/* Header + Info — keduanya FIXED di luar ScrollView agar tidak tertutup */}
       <View style={[styles.topBlock, { paddingTop: insets.top + 12 }]}>
         {/* Greeting */}
@@ -103,14 +113,18 @@ export default function StudentDashboard() {
           </View>
           <View style={styles.infoSep} />
           <View style={styles.infoItem}>
-            <Text style={styles.infoValue}>{assignments.length}</Text>
+            <AnimatedNumber
+              value={assignments.length}
+              style={styles.infoValue as any}
+            />
             <Text style={styles.infoLabel}>Tugas Aktif</Text>
           </View>
           <View style={styles.infoSep} />
           <View style={styles.infoItem}>
-            <Text style={[styles.infoValue, violationPoints >= 80 && styles.dangerText]}>
-              {violationPoints}
-            </Text>
+            <AnimatedNumber
+              value={violationPoints}
+              style={[styles.infoValue, violationPoints >= 80 && styles.dangerText] as any}
+            />
             <Text style={styles.infoLabel}>Poin</Text>
           </View>
         </View>
@@ -119,6 +133,14 @@ export default function StudentDashboard() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.gray5}
+            colors={[Colors.black]}
+          />
+        }
       >
         {/* Menu grid 3x3 */}
         <Text style={styles.sectionTitle}>Menu</Text>
@@ -195,7 +217,7 @@ export default function StudentDashboard() {
           </>
         )}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 

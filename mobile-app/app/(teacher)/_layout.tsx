@@ -1,7 +1,7 @@
 ﻿import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet } from 'react-native';
 import { Colors } from '../../src/constants/theme';
+import { AnimatedTabBar } from '../../src/components/shared/AnimatedTabBar';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 const tabIcon = (name: IoniconsName, focused: boolean) => (
@@ -15,18 +15,8 @@ const tabIcon = (name: IoniconsName, focused: boolean) => (
 export default function TeacherLayout() {
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: Colors.black,
-        tabBarInactiveTintColor: Colors.gray7,
-        tabBarHideOnKeyboard: true,
-        tabBarStyle: {
-          backgroundColor: Colors.cardBackground,
-          borderTopColor: Colors.separator,
-          borderTopWidth: StyleSheet.hairlineWidth,
-        },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
-      }}
+      tabBar={(props) => <AnimatedTabBar {...props} />}
+      screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="dashboard"          options={{ title: 'Beranda', tabBarIcon: ({ focused }) => tabIcon('home', focused) }} />
       <Tabs.Screen name="upload-material"    options={{ title: 'Materi',  tabBarIcon: ({ focused }) => tabIcon('cloud-upload', focused) }} />
@@ -35,6 +25,8 @@ export default function TeacherLayout() {
       <Tabs.Screen name="assignments/grade"  options={{ title: 'Nilai',   tabBarIcon: ({ focused }) => tabIcon('checkmark-circle', focused) }} />
       <Tabs.Screen name="attendance"         options={{ title: 'Absensi', tabBarIcon: ({ focused }) => tabIcon('list', focused) }} />
       <Tabs.Screen name="chat"               options={{ title: 'Chat',    tabBarIcon: ({ focused }) => tabIcon('chatbubble', focused) }} />
+      {/* QR absensi — diakses dari attendance screen, hidden dari tab bar */}
+      <Tabs.Screen name="qr-attendance"      options={{ href: null }} />
     </Tabs>
   );
 }

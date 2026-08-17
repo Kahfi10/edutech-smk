@@ -1,9 +1,13 @@
-﻿import React, { useRef } from 'react';
+﻿import React from 'react';
 import {
   TouchableOpacity, Text, ActivityIndicator,
-  StyleSheet, ViewStyle, TextStyle, Animated, Platform,
+  StyleSheet, ViewStyle, TextStyle,
 } from 'react-native';
+import Animated, {
+  useSharedValue, useAnimatedStyle, withSpring,
+} from 'react-native-reanimated';
 import { Colors, Radius, Typography } from '../../constants/theme';
+import { hapticLight, hapticMedium } from '../../services/haptics';
 
 interface ButtonProps {
   title: string;
@@ -17,24 +21,33 @@ interface ButtonProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
+const PRESS_IN  = { damping: 15, stiffness: 400, mass: 0.5 };
+const PRESS_OUT = { damping: 12, stiffness: 300, mass: 0.5 };
+
 export const Button: React.FC<ButtonProps> = ({
   title, onPress, variant = 'primary', loading = false,
   disabled = false, fullWidth = false, style, textStyle, size = 'md',
 }) => {
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useSharedValue(1);
   const v = (variant === 'danger' ? 'destructive' : variant) as
     'primary' | 'secondary' | 'ghost' | 'destructive';
   const isDisabled = disabled || loading;
 
-  const pressIn  = () => Animated.spring(scale, { toValue: 0.97, useNativeDriver: Platform.OS !== "web", damping: 15, stiffness: 400 }).start();
-  const pressOut = () => Animated.spring(scale, { toValue: 1,    useNativeDriver: Platform.OS !== "web", damping: 15, stiffness: 400 }).start();
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   return (
-    <Animated.View style={[fullWidth && styles.fullWidth, { transform: [{ scale }] }, style]}>
+    <Animated.View style={[fullWidth && styles.fullWidth, animStyle, style]}>
       <TouchableOpacity
-        onPress={onPress}
-        onPressIn={pressIn}
-        onPressOut={pressOut}
+        onPress={() => { hapticMedium(); onPress(); }}
+        onPressIn={() => {
+          if (!isDisabled) {
+            hapticLight();
+            scale.value = withSpring(0.97, PRESS_IN);
+          }
+        }}
+        onPressOut={() => { scale.value = withSpring(1, PRESS_OUT); }}
         disabled={isDisabled}
         activeOpacity={1}
         style={[

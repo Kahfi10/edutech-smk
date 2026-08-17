@@ -1,12 +1,21 @@
 ﻿/**
- * BottomSheet — Reusable modal dengan keyboard handling yang benar
- * Menggantikan Modal biasa di semua form/input screen
+ * BottomSheet — Reanimated v4 (UI thread, 60/120fps)
+ *
+ * Layout:
+ *   Modal
+ *   └─ KeyboardAvoidingView  flex:1 justifyContent:flex-end
+ *      ├─ backdrop (absoluteFill Animated.View)
+ *      └─ sheet (Animated.View — slide up/down + fade backdrop)
  */
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
-  Modal, View, StyleSheet, Animated, Pressable,
+  Modal, View, StyleSheet, Pressable,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import Animated, {
+  useSharedValue, useAnimatedStyle,
+  withSpring, withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Radius } from '../../constants/theme';
 
@@ -17,47 +26,55 @@ interface BottomSheetProps {
   scrollable?: boolean;
 }
 
+// Spring config — lebih natural dari ease-out
+const SPRING = { damping: 22, stiffness: 220, mass: 0.8 };
+
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   visible, onClose, children, scrollable = true,
 }) => {
   const insets  = useSafeAreaInsets();
-  const slideY  = useRef(new Animated.Value(300)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const slideY  = useSharedValue(320);
+  const opacity = useSharedValue(0);
 
   useEffect(() => {
     if (visible) {
-      Animated.parallel([
-        Animated.spring(slideY, { toValue: 0, useNativeDriver: Platform.OS !== "web", damping: 20, stiffness: 200 }),
-        Animated.timing(opacity, { toValue: 1, duration: 200, useNativeDriver: Platform.OS !== "web" }),
-      ]).start();
+      // Backdrop fade in
+      opacity.value = withTiming(1, { duration: 180 });
+      // Sheet spring in — terasa "dilempar ke atas" bukan linear
+      slideY.value  = withSpring(0, SPRING);
     } else {
-      Animated.parallel([
-        Animated.timing(slideY,  { toValue: 300, duration: 200, useNativeDriver: Platform.OS !== "web" }),
-        Animated.timing(opacity, { toValue: 0,   duration: 200, useNativeDriver: Platform.OS !== "web" }),
-      ]).start();
+      opacity.value = withTiming(0, { duration: 180 });
+      slideY.value  = withTiming(320, { duration: 200 });
     }
   }, [visible]);
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: slideY.value }],
+  }));
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        style={styles.kavFull}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
       >
         {/* Backdrop */}
-        <Animated.View style={[styles.backdrop, { opacity }]}>
+        <Animated.View style={[styles.backdrop, backdropStyle]} pointerEvents="box-none">
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
 
-        {/* Sheet */}
+        {/* Sheet — flex child di bawah, naik saat keyboard muncul */}
         <Animated.View
           style={[
             styles.sheetWrap,
-            { paddingBottom: insets.bottom + 8, transform: [{ translateY: slideY }] },
+            { paddingBottom: insets.bottom + 8 },
+            sheetStyle,
           ]}
         >
-          {/* Handle bar */}
           <View style={styles.handle} />
 
           {scrollable ? (
@@ -65,6 +82,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               contentContainerStyle={styles.scrollContent}
+              bounces={false}
             >
               {children}
             </ScrollView>
@@ -78,20 +96,19 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 };
 
 const styles = StyleSheet.create({
+  kavFull: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.35)',
   },
   sheetWrap: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: Colors.cardBackground,
     borderTopLeftRadius: Radius.xxl,
     borderTopRightRadius: Radius.xxl,
-    maxHeight: '90%',
-    // shadow
+    maxHeight: '85%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
@@ -106,12 +123,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 6,
   },
-  scrollContent: {
-    padding: 20,
-    paddingTop: 8,
-  },
-  content: {
-    padding: 20,
-    paddingTop: 8,
-  },
+  scrollContent: { padding: 20, paddingTop: 8 },
+  content:       { padding: 20, paddingTop: 8 },
 });

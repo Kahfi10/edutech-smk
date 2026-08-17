@@ -67,7 +67,10 @@ service cloud.firestore {
     // Attendance
     match /attendance/{attendanceId} {
       allow read: if isAuthenticated();
-      allow create, update: if hasAnyRole(['TEACHER', 'PIKET', 'ADMIN']);
+      // STUDENT bisa create/update untuk scan mandiri QR Piket
+      // TEACHER, PIKET, ADMIN untuk input manual
+      allow create: if hasAnyRole(['TEACHER', 'PIKET', 'ADMIN', 'STUDENT']);
+      allow update: if hasAnyRole(['TEACHER', 'PIKET', 'ADMIN', 'STUDENT']);
       allow delete: if hasRole('ADMIN');
     }
 
@@ -84,10 +87,12 @@ service cloud.firestore {
 
     // Counseling
     match /counseling/{counselingId} {
+      // BK bisa baca semua counseling untuk dashboard + manajemen
+      // Siswa hanya baca milik sendiri
       allow read: if isAuthenticated() && (
+        hasAnyRole(['BK', 'ADMIN']) ||
         resource.data.studentId == request.auth.uid ||
-        resource.data.bkTeacherId == request.auth.uid ||
-        hasRole('ADMIN')
+        resource.data.bkTeacherId == request.auth.uid
       );
       allow create: if hasAnyRole(['STUDENT', 'BK']);
       allow update: if isAuthenticated() && (

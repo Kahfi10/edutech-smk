@@ -5,7 +5,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../src/context/AuthContext';
-import { getCollection, updateDocument } from '../../../src/firebase/firestore.service';
+import { getCollection, updateDocument, where } from '../../../src/firebase/firestore.service';
 import { Badge } from '../../../src/components/ui/Badge';
 import { LoadingSpinner } from '../../../src/components/ui/LoadingSpinner';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../../src/constants/theme';
@@ -19,17 +19,24 @@ export default function BKScheduleScreen() {
 
   const load = async () => {
     if (!profile) return;
-    const [counselings, users] = await Promise.all([
-      getCollection('counseling'),
-      getCollection('users'),
-    ]);
-    const sMap: Record<string, any> = {};
-    (users as any[]).forEach(u => (sMap[u.uid] = u));
-    setStudentMap(sMap);
-    const mine = (counselings as any[]).filter(c => c.bkTeacherId === profile.uid)
-      .sort((a, b) => a.scheduledAt?.toDate?.() - b.scheduledAt?.toDate?.());
-    setBookings(mine);
-    setLoading(false);
+    setLoading(true);
+    try {
+      const [counselings, users] = await Promise.all([
+        // Filter by bkTeacherId — sesuai rules, efisien, dan tidak perlu baca semua docs
+        getCollection('counseling', where('bkTeacherId', '==', profile.uid)),
+        getCollection('users'),
+      ]);
+      const sMap: Record<string, any> = {};
+      (users as any[]).forEach(u => (sMap[u.uid] = u));
+      setStudentMap(sMap);
+      const sorted = (counselings as any[])
+        .sort((a, b) => (a.scheduledAt?.toDate?.() ?? 0) - (b.scheduledAt?.toDate?.() ?? 0));
+      setBookings(sorted);
+    } catch (e) {
+      console.warn('[BKSchedule] load error:', e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [profile]);

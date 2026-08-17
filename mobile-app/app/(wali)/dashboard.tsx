@@ -1,14 +1,17 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState, useCallback } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { useAuth } from '../../src/context/AuthContext';
 import { logoutUser } from '../../src/firebase/auth.service';
 import { getCollection, subscribeCollection, where } from '../../src/firebase/firestore.service';
-import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
+import { SkeletonDashboard } from '../../src/components/ui/Skeleton';
+import { AnimatedNumber } from '../../src/components/ui/AnimatedNumber';
+import { hapticWarning } from '../../src/services/haptics';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 export default function WaliDashboard() {
@@ -20,10 +23,10 @@ export default function WaliDashboard() {
   const [avgGrade, setAvgGrade] = useState(0);
   const [className, setClassName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     if (!profile?.classId) { setLoading(false); return; }
-
     Promise.all([
       getCollection('classes'),
       getCollection('users', where('role', '==', 'STUDENT'), where('classId', '==', profile.classId)),
@@ -34,14 +37,12 @@ export default function WaliDashboard() {
       const myClass = (cls as any[]).find(c => c.id === profile.classId);
       setClassName(myClass?.name ?? '');
       setStudents(studs as any[]);
-
       let alerts = 0;
       for (const s of studs as any[]) {
         const alphas = (attend as any[]).filter(a =>
           a.records?.some((r: any) => r.studentId === s.uid && r.status === 'alpha')
         ).length;
         if (alphas > 3) alerts++;
-
         const mySubs = (subs as any[]).filter(x => x.studentId === s.uid && x.score != null);
         if (mySubs.length >= 4) {
           const recent = mySubs.slice(-2).reduce((n: number, x: any) => n + x.score, 0) / 2;
@@ -54,7 +55,6 @@ export default function WaliDashboard() {
         if (pts >= 80) alerts++;
       }
       setAlertCount(alerts);
-
       const allSubs = (subs as any[]).filter(s =>
         (studs as any[]).some((st: any) => st.uid === s.studentId) && s.score != null
       );
@@ -64,7 +64,15 @@ export default function WaliDashboard() {
     }).finally(() => setLoading(false));
   }, [profile]);
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData();
+    setTimeout(() => setRefreshing(false), 1200);
+  }, [fetchData]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  if (loading) return <SkeletonDashboard rows={3} />;
 
   const NAV = [
     { label: 'Daftar Siswa', icon: 'people-outline',       route: '/(wali)/students'   },
@@ -73,33 +81,37 @@ export default function WaliDashboard() {
   ] as const;
 
   return (
-    <View style={styles.container}>
+    <Animated.View entering={FadeIn.duration(300)} style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View>
-          <Text style={styles.role}>Wali Kelas  {className}</Text>
+          <Text style={styles.role}>Wali Kelas {className}</Text>
           <Text style={styles.name}>{profile?.name}</Text>
         </View>
         <TouchableOpacity
-          onPress={() => Alert.alert('Keluar', 'Yakin?', [
-            { text: 'Batal', style: 'cancel' },
-            { text: 'Keluar', style: 'destructive', onPress: logoutUser },
-          ])}
+          onPress={() => { hapticWarning(); logoutUser(); }}
           style={styles.logoutBtn} hitSlop={8}
         >
           <Ionicons name="log-out-outline" size={22} color={Colors.white} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gray5} colors={[Colors.black]} />}
+      >
         {/* Stats strip */}
         <View style={styles.statsRow}>
           {[
-            { label: 'Siswa',      value: students.length                                },
-            { label: 'Rata-rata',  value: avgGrade                                       },
-            { label: 'Alert',      value: alertCount, warn: alertCount > 0               },
+            { label: 'Siswa',      value: students.length,  warn: false        },
+            { label: 'Rata-rata',  value: avgGrade,         warn: false        },
+            { label: 'Alert',      value: alertCount,       warn: alertCount > 0 },
           ].map(s => (
             <View key={s.label} style={styles.statCard}>
-              <Text style={[styles.statValue, (s as any).warn && styles.warnText]}>{s.value}</Text>
+              <AnimatedNumber
+                value={s.value}
+                style={[styles.statValue, s.warn && styles.warnText] as any}
+              />
               <Text style={styles.statLabel}>{s.label}</Text>
             </View>
           ))}
@@ -173,7 +185,7 @@ export default function WaliDashboard() {
           </>
         )}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 
