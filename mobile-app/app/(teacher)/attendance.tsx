@@ -1,13 +1,15 @@
 ﻿import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, TextInput,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { getCollection, addDocument, where } from '../../src/firebase/firestore.service';
 import { Button } from '../../src/components/ui/Button';
 import { LoadingSpinner } from '../../src/components/ui/LoadingSpinner';
+import { hapticLight } from '../../src/services/haptics';
 import { Colors, Typography, Spacing, Radius, Shadow } from '../../src/constants/theme';
 
 const STATUSES = ['hadir', 'izin', 'sakit', 'alpha'] as const;
@@ -22,7 +24,8 @@ const STATUS_STYLE: Record<AttendStatus, { color: string; bg: string }> = {
 
 export default function AttendanceScreen() {
   const { profile } = useAuth();
-  const insets = useSafeAreaInsets();
+  const insets  = useSafeAreaInsets();
+  const router  = useRouter();
   const [subjects, setSubjects] = useState<any[]>([]);
   const [classes, setClasses]   = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
@@ -79,8 +82,18 @@ export default function AttendanceScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
-        <Text style={styles.headerTitle}>Input Absensi</Text>
-        <Text style={styles.headerDate}>{today}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Input Absensi</Text>
+          <Text style={styles.headerDate}>{today}</Text>
+        </View>
+        {/* Tombol QR — buka mode absensi via QR scan siswa */}
+        <TouchableOpacity
+          style={styles.qrBtn}
+          onPress={() => { hapticLight(); router.push('/(teacher)/qr-attendance' as any); }}
+        >
+          <Ionicons name="qr-code-outline" size={18} color={Colors.white} />
+          <Text style={styles.qrBtnText}>QR</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Filters */}
@@ -175,9 +188,16 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
     backgroundColor: Colors.gray1, paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xl,
+    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
   },
   headerTitle: { ...Typography.title2, color: Colors.white },
-  headerDate: { ...Typography.footnote, color: 'rgba(255,255,255,0.45)', marginTop: 4 },
+  headerDate:  { ...Typography.footnote, color: 'rgba(255,255,255,0.45)', marginTop: 4 },
+  qrBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: Radius.md,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  qrBtnText: { fontSize: 13, fontWeight: '600', color: Colors.white },
   filters: {
     backgroundColor: Colors.cardBackground, paddingHorizontal: Spacing.base, paddingVertical: Spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.separator,
